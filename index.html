@@ -258,10 +258,10 @@
   <p class="error" id="err" style="display:none;margin-top:10px"></p>
 
   <div class="row" style="margin-top:12px">
-    <a class="btn" id="cta" href="/contact" target="_blank" rel="noopener">
+    <a class="btn" id="cta" href="https://warnowmoments.de/reservierung" target="_blank" rel="noopener">
       Reservierung anfragen
     </a>
-    <a class="btn2" id="cta2" href="/contact" target="_blank" rel="noopener">
+    <a class="btn2" id="cta2" href="https://warnowmoments.de/contact" target="_blank" rel="noopener">
       Kontaktformular öffnen
     </a>
   </div>
@@ -330,9 +330,9 @@
   const PUBLIC_CAL_URL = "./wm_public_calendar.json";
   const BLOCK_STATUSES = new Set(["reserved","confirmed"]);
 
-  // Wichtig: relative Pfade, damit es auf kalender.warnowmoments.de bleibt
-  const CONTACT_URL = "/contact";
-  const RESERVATION_URL = "/contact"; // Falls du später eine echte Seite hast: z.B. "/reservierung"
+  // Squarespace Ziele:
+  const CONTACT_URL = "https://warnowmoments.de/contact";
+  const RESERVATION_URL = "https://warnowmoments.de/reservierung";
 
   const dateEl = document.getElementById("date");
   const pkgEl = document.getElementById("package");
@@ -503,10 +503,10 @@
     const pkgLabel = pkgEl.options[pkgEl.selectedIndex]?.textContent || "";
     const startVal = startEl.value || "";
 
-    // Kontaktbutton: immer auf /contact (kalender-Subdomain)
+    // Kontaktbutton: immer ohne Parameter
     cta2El.href = CONTACT_URL;
 
-    // Reservierungsbutton: wenn nichts gewählt, auch nur /contact, sonst mit Parametern
+    // Reservierung: ohne Auswahl -> Ziel ohne Parameter
     if(!dateISO || !startVal || startEl.disabled){
       ctaEl.href = RESERVATION_URL;
       selectedPillEl.textContent = "Auswahl: –";
@@ -518,7 +518,7 @@
     q.set("start", startVal);
     if(pkgLabel) q.set("paket", pkgLabel);
 
-    // optional doppelt für dein Formular (falls du es so erwartest)
+    // optional doppelt (falls du das in Squarespace so ausliest)
     q.set("SQF_date", dateISO);
     q.set("SQF_start", startVal);
     if(pkgLabel) q.set("SQF_paket", pkgLabel);
