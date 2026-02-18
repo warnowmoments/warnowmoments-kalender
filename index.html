@@ -703,6 +703,7 @@
       const { allowed, lastStartTsHour } = computeAllowedStartHours(dateISO, sunset, duration);
       const filtered = filterByBookings(dateISO, duration, allowed);
 
+      // NEU: Select oben nutzt exakt diese Logik (identisch zu den Buttons unten)
       setStartOptions(filtered, previouslySelected);
 
       const sunsetText = sunset.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
@@ -820,7 +821,7 @@
     const scaleHours = [TL_START_HOUR, TL_START_HOUR+3, TL_START_HOUR+6, TL_END_HOUR];
     for(const h of scaleHours){
       const sp = document.createElement("span");
-      sp.textContent = `${String(h).padStart(2,"0")}:00`;
+      sp.textContent = `${pad2(h)}:00`;
       tlScaleEl.appendChild(sp);
     }
 
@@ -879,30 +880,6 @@
     }
   }
 
-  async function showDaySlots(dayISO){
-    calDayTitleEl.textContent = `Freie Startzeiten am ${dayISO} (für das ausgewählte Paket):`;
-    calSlotsEl.innerHTML = "";
-
-    try{
-      const sunset = await getSunsetLocal(dayISO);
-      const duration = Number(pkgEl.value);
-
-      const { allowed } = computeAllowedStartHours(dayISO, sunset, duration);
-      const filtered = filterByBookings(dayISO, duration, allowed);
-
-      buildSlotButtons(dayISO, filtered);
-      renderBlocksList(dayISO);
-      renderTimeline(dayISO);
-    } catch(e){
-      const span = document.createElement("span");
-      span.className = "muted";
-      span.textContent = "Slots konnten nicht berechnet werden (Sonnenuntergang nicht verfügbar).";
-      calSlotsEl.appendChild(span);
-      renderBlocksList(dayISO);
-      renderTimeline(dayISO);
-    }
-  }
-
   function countBlocksOnDay(iso){
     const aStart = new Date(iso + "T00:00:00").getTime();
     const aEnd = new Date(iso + "T23:59:59").getTime();
@@ -949,6 +926,30 @@
       });
 
       calSlotsEl.appendChild(btn);
+    }
+  }
+
+  async function showDaySlots(dayISO){
+    calDayTitleEl.textContent = `Freie Startzeiten am ${dayISO} (für das ausgewählte Paket):`;
+    calSlotsEl.innerHTML = "";
+
+    try{
+      const sunset = await getSunsetLocal(dayISO);
+      const duration = Number(pkgEl.value);
+
+      const { allowed } = computeAllowedStartHours(dayISO, sunset, duration);
+      const filtered = filterByBookings(dayISO, duration, allowed);
+
+      buildSlotButtons(dayISO, filtered);
+      renderBlocksList(dayISO);
+      renderTimeline(dayISO);
+    } catch(e){
+      const span = document.createElement("span");
+      span.className = "muted";
+      span.textContent = "Slots konnten nicht berechnet werden (Sonnenuntergang nicht verfügbar).";
+      calSlotsEl.appendChild(span);
+      renderBlocksList(dayISO);
+      renderTimeline(dayISO);
     }
   }
 
@@ -1115,6 +1116,31 @@
     window.location.href = buildMailtoLink();
   });
 
+  // --- iFrame Auto-Height (Child -> Parent) ---
+  // Cross-origin: Parent darf Höhe nicht direkt lesen, daher postMessage. [web:179]
+  function wmPostHeight(){
+    const h = Math.max(
+      document.documentElement.scrollHeight,
+      document.body?.scrollHeight || 0,
+      document.documentElement.offsetHeight,
+      document.body?.offsetHeight || 0
+    );
+
+    window.parent?.postMessage({ type: "wm-iframe-height", height: h }, "https://warnowmoments.de");
+    window.parent?.postMessage({ type: "wm-iframe-height", height: h }, "https://www.warnowmoments.de");
+  }
+
+  window.addEventListener("load", () => {
+    wmPostHeight();
+    setTimeout(wmPostHeight, 250);
+    setTimeout(wmPostHeight, 1000);
+  });
+
+  if ("ResizeObserver" in window) {
+    const ro = new ResizeObserver(() => wmPostHeight());
+    ro.observe(document.documentElement);
+  }
+
   (async () => {
     await loadPublicCalendar();
     await loadHolidaysForYear(new Date().getFullYear());
@@ -1125,7 +1151,6 @@
 
     dateEl.value = todayISO;
 
-    // NEU: Kalender/Tag direkt initial auswählen und anzeigen
     calSelectedISO = todayISO;
     calCursor = new Date(todayISO + "T00:00:00");
     calCursor.setDate(1);
@@ -1134,6 +1159,9 @@
     await renderCalendar();
     await refresh();
     showDaySlots(todayISO);
+
+    // einmal nach initialem Render nochmal Höhe senden
+    wmPostHeight();
   })();
 })();
 </script>
