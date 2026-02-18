@@ -1,23 +1,11 @@
 {
-  "generatedAt": "2026-02-16T22:21:34.807Z",
+  "generatedAt": "2026-02-18T13:36:33.916Z",
   "resourceId": "floss_1",
   "events": [
-    {
-      "title": "Gebucht",
-      "start": "2026-04-09T00:00:00",
-      "end": "2026-04-09T23:59:00",
-      "status": "confirmed"
-    },
     {
       "title": "Reserviert",
       "start": "2026-08-06T00:00:00",
       "end": "2026-08-09T23:59:00",
-      "status": "reserved"
-    },
-    {
-      "title": "Reserviert",
-      "start": "2026-05-14T00:00:00",
-      "end": "2026-05-15T00:00:00",
       "status": "reserved"
     },
     {
@@ -27,22 +15,10 @@
       "status": "reserved"
     },
     {
-      "title": "Reserviert",
-      "start": "2026-02-18T14:00:00",
-      "end": "2026-02-18T18:00:00",
-      "status": "reserved"
-    },
-    {
-      "title": "Reserviert",
-      "start": "2026-02-18T09:00:00",
-      "end": "2026-02-18T13:00:00",
-      "status": "reserved"
-    },
-    {
-      "title": "Reserviert",
+      "title": "Gebucht",
       "start": "2026-04-18T11:00:00",
       "end": "2026-04-18T17:00:00",
-      "status": "reserved"
+      "status": "confirmed"
     }
   ]
 }
