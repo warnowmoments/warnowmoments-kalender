@@ -71,7 +71,7 @@
 
     select,input,button,textarea{ font: inherit; }
 
-    select,input{
+    select,input,textarea{
       padding:10px;
       width:100%;
       max-width:100%;
@@ -80,9 +80,14 @@
       border-radius: 10px;
       background: #fff;
     }
-    select:disabled, input:disabled{
+    select:disabled, input:disabled, textarea:disabled{
       background: #f8fafc;
       color: #6b7280;
+    }
+
+    textarea{
+      min-height: 110px;
+      resize: vertical;
     }
 
     .grid{
@@ -136,6 +141,20 @@
       line-height: 1.2;
     }
     .kv{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+
+    /* Feiertags-Label im Kalender */
+    .holiday-label{
+      margin-top: 2px;
+      font-size: 11px;
+      line-height: 1.15;
+      font-weight: 900;
+      color: var(--c-primary);
+      opacity: 0.95;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
 
     /* Timeline */
     .tl-wrap{
@@ -230,12 +249,12 @@
   <div class="grid">
     <div>
       <label for="date">Datum</label>
-      <input id="date" type="date" />
+      <input id="date" type="date" required />
     </div>
 
     <div>
       <label for="package">Paket</label>
-      <select id="package">
+      <select id="package" required>
         <option value="4">Explorer‑Tour (4 Std.)</option>
         <option value="6">Halbtags‑Cruise (6 Std.)</option>
         <option value="8">Ganztags‑Abenteuer (8 Std.)</option>
@@ -244,7 +263,7 @@
 
     <div>
       <label for="start">Startzeit (volle Stunde)</label>
-      <select id="start"></select>
+      <select id="start" required></select>
     </div>
   </div>
 
@@ -256,6 +275,26 @@
 
   <p class="muted" id="hint" style="margin-top:10px"></p>
   <p class="error" id="err" style="display:none;margin-top:10px"></p>
+
+  <div class="grid" style="margin-top:10px">
+    <div>
+      <label for="name">Name</label>
+      <input id="name" type="text" autocomplete="name" required />
+    </div>
+    <div>
+      <label for="email">E‑Mail Adresse</label>
+      <input id="email" type="email" autocomplete="email" required />
+    </div>
+    <div>
+      <label for="phone">Telefonnummer</label>
+      <input id="phone" type="tel" autocomplete="tel" required />
+    </div>
+  </div>
+
+  <div style="margin-top:2px">
+    <label for="message">Nachricht</label>
+    <textarea id="message" placeholder="Optional: z.B. Teilnehmerzahl, besondere Wünsche, Rückfragen …"></textarea>
+  </div>
 
   <div class="row" style="margin-top:12px">
     <a class="btn" id="cta" href="https://warnowmoments.de/reservierung" target="_blank" rel="noopener">
@@ -334,6 +373,14 @@
   const CONTACT_URL = "https://warnowmoments.de/contact";
   const RESERVATION_URL = "https://warnowmoments.de/reservierung";
 
+  // Ziel-Mailadresse
+  const TO_EMAIL = "kontakt@warnowmoments.de";
+
+  // Feiertage (Nager.Date API, CORS enabled, no rate limit) [page:0]
+  const HOLIDAY_COUNTRY = "DE";
+  const HOLIDAY_COUNTY = "DE-MV"; // Mecklenburg-Vorpommern (ISO-3166-2), Filter via "counties" Feld [page:0]
+  const HOLIDAY_API_BASE = "https://date.nager.at/api/v3/PublicHolidays"; // /{Year}/{CountryCode} [page:0]
+
   const dateEl = document.getElementById("date");
   const pkgEl = document.getElementById("package");
   const startEl = document.getElementById("start");
@@ -344,6 +391,11 @@
   const selectedPillEl = document.getElementById("selected-pill");
   const sunsetPillEl = document.getElementById("sunset-pill");
   const publicPillEl = document.getElementById("public-pill");
+
+  const nameEl = document.getElementById("name");
+  const emailEl = document.getElementById("email");
+  const phoneEl = document.getElementById("phone");
+  const messageEl = document.getElementById("message");
 
   const calPrevEl = document.getElementById("cal-prev");
   const calNextEl = document.getElementById("cal-next");
@@ -367,6 +419,9 @@
 
   let publicEvents = [];
   let publicCalendarState = "unknown";
+
+  // Feiertage Cache: Map<year, Map<dateISO, localName>>
+  const holidayByYear = new Map();
 
   function pad2(n){ return String(n).padStart(2,"0"); }
   function fmtTime(h){ return `${pad2(h)}:00`; }
@@ -395,10 +450,81 @@
     return `${h}h ${m}min`;
   }
 
-  let calCursor = new Date();
-  calCursor.setDate(1);
-  calCursor.setHours(0,0,0,0);
-  let calSelectedISO = null;
+  function escapeText(s){
+    return String(s || "").replace(/\s+/g, " ").trim();
+  }
+
+  function validateRequiredFields(){
+    const required = [
+      { el: nameEl, msg: "Bitte Name eingeben." },
+      { el: emailEl, msg: "Bitte E‑Mail Adresse eingeben." },
+      { el: phoneEl, msg: "Bitte Telefonnummer eingeben." },
+      { el: dateEl, msg: "Bitte Datum auswählen." },
+      { el: pkgEl, msg: "Bitte Paket auswählen." },
+      { el: startEl, msg: "Bitte Startzeit auswählen." },
+    ];
+
+    for(const r of required){
+      if(!r.el) continue;
+
+      if(r.el === startEl && startEl.disabled){
+        setError("Bitte Datum/Paket so wählen, dass eine Startzeit verfügbar ist (oder Kontaktformular öffnen).");
+        startEl.focus?.();
+        return false;
+      }
+
+      const val = (r.el.value || "").trim();
+      if(!val){
+        setError(r.msg);
+        r.el.focus?.();
+        return false;
+      }
+
+      if(typeof r.el.checkValidity === "function" && !r.el.checkValidity()){
+        setError(r.msg);
+        r.el.reportValidity?.();
+        r.el.focus?.();
+        return false;
+      }
+    }
+
+    setError("");
+    return true;
+  }
+
+  function buildMailtoLink(){
+    const dateISO = (dateEl.value || "").trim();
+    const pkgLabel = pkgEl.options[pkgEl.selectedIndex]?.textContent || "";
+    const startVal = (startEl.value || "").trim();
+
+    const name = escapeText(nameEl?.value);
+    const email = escapeText(emailEl?.value);
+    const phone = escapeText(phoneEl?.value);
+    const message = escapeText(messageEl?.value);
+
+    const subject = `Reservierungsanfrage ${dateISO} ${startVal}`.trim();
+
+    const lines = [
+      "Neue Reservierungsanfrage",
+      "",
+      `Datum: ${dateISO}`,
+      `Paket: ${pkgLabel}`,
+      `Startzeit: ${startVal}`,
+      "",
+      `Name: ${name}`,
+      `E-Mail: ${email}`,
+      `Telefon: ${phone}`,
+      "",
+      `Nachricht: ${message || "-"}`,
+    ];
+
+    const body = lines.join("\n");
+    const params = new URLSearchParams();
+    params.set("subject", subject);
+    params.set("body", body);
+
+    return `mailto:${encodeURIComponent(TO_EMAIL)}?${params.toString()}`;
+  }
 
   async function loadPublicCalendar(){
     try{
@@ -423,6 +549,45 @@
       publicCalendarState = "failed";
       publicPillEl.textContent = "Kalender aktuell nicht verfügbar";
     }
+  }
+
+  function holidayAppliesToMV(h){
+    // Nager.Date Modell: "global" oder "counties" mit ISO-3166-2 Codes [page:0]
+    if(!h) return false;
+    if(h.global === true) return true;
+    if(Array.isArray(h.counties) && h.counties.includes(HOLIDAY_COUNTY)) return true;
+    return false;
+  }
+
+  async function loadHolidaysForYear(year){
+    if(holidayByYear.has(year)) return;
+
+    try{
+      const url = `${HOLIDAY_API_BASE}/${year}/${HOLIDAY_COUNTRY}`;
+      const res = await fetch(url, { cache: "force-cache" });
+      if(!res.ok) throw new Error("holiday fetch failed");
+      const data = await res.json();
+
+      const map = new Map();
+      if(Array.isArray(data)){
+        for(const h of data){
+          if(!holidayAppliesToMV(h)) continue;
+          const iso = String(h.date || "").slice(0,10);
+          const name = String(h.localName || h.name || "").trim();
+          if(iso && name) map.set(iso, name);
+        }
+      }
+      holidayByYear.set(year, map);
+    } catch(e){
+      // Bei Fehler: leere Map setzen, damit wir nicht dauernd neu fetchen
+      holidayByYear.set(year, new Map());
+    }
+  }
+
+  function getHolidayNameForISO(iso){
+    const y = Number(String(iso).slice(0,4));
+    const m = holidayByYear.get(y);
+    return m ? (m.get(iso) || "") : "";
   }
 
   async function getSunsetLocal(dateISO){
@@ -503,10 +668,8 @@
     const pkgLabel = pkgEl.options[pkgEl.selectedIndex]?.textContent || "";
     const startVal = startEl.value || "";
 
-    // Kontaktbutton: immer ohne Parameter
     cta2El.href = CONTACT_URL;
 
-    // Reservierung: ohne Auswahl -> Ziel ohne Parameter
     if(!dateISO || !startVal || startEl.disabled){
       ctaEl.href = RESERVATION_URL;
       selectedPillEl.textContent = "Auswahl: –";
@@ -518,7 +681,6 @@
     q.set("start", startVal);
     if(pkgLabel) q.set("paket", pkgLabel);
 
-    // optional doppelt (falls du das in Squarespace so ausliest)
     q.set("SQF_date", dateISO);
     q.set("SQF_start", startVal);
     if(pkgLabel) q.set("SQF_paket", pkgLabel);
@@ -804,11 +966,14 @@
     }
   }
 
-  function renderCalendar(){
+  async function renderCalendar(){
     if(!calGridEl) return;
 
     const year = calCursor.getFullYear();
     const month = calCursor.getMonth();
+
+    await loadHolidaysForYear(year);
+    const holidayMap = holidayByYear.get(year) || new Map();
 
     if(calTitleEl){
       calTitleEl.textContent = calCursor.toLocaleDateString("de-DE", { month:"long", year:"numeric" });
@@ -875,6 +1040,16 @@
       num.textContent = String(day);
       cell.appendChild(num);
 
+      // Feiertag: Name linksbündig auf Höhe der Zahl (direkt darunter, gleiche Flucht)
+      const holidayName = holidayMap.get(iso) || "";
+      if(holidayName){
+        const h = document.createElement("div");
+        h.className = "holiday-label";
+        h.textContent = holidayName;
+        cell.appendChild(h);
+        cell.title = holidayName;
+      }
+
       const { reserved, confirmed } = countBlocksOnDay(iso);
       if(reserved || confirmed){
         const badge = document.createElement("div");
@@ -893,7 +1068,7 @@
         if(isPast) return;
 
         calSelectedISO = iso;
-        renderCalendar();
+        await renderCalendar();
 
         dateEl.value = iso;
         await refresh();
@@ -908,13 +1083,13 @@
     calGridEl.appendChild(grid);
   }
 
-  calPrevEl?.addEventListener("click", () => {
+  calPrevEl?.addEventListener("click", async () => {
     calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()-1, 1);
-    renderCalendar();
+    await renderCalendar();
   });
-  calNextEl?.addEventListener("click", () => {
+  calNextEl?.addEventListener("click", async () => {
     calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()+1, 1);
-    renderCalendar();
+    await renderCalendar();
   });
   calTodayEl?.addEventListener("click", async () => {
     const t = new Date();
@@ -923,7 +1098,7 @@
     calCursor = new Date(t.getFullYear(), t.getMonth(), 1);
     calSelectedISO = t.toISOString().slice(0,10);
 
-    renderCalendar();
+    await renderCalendar();
 
     dateEl.value = calSelectedISO;
     await refresh();
@@ -942,13 +1117,26 @@
   dateEl.addEventListener("change", refresh);
   startEl.addEventListener("change", updateCtas);
 
+  ctaEl?.addEventListener("click", (ev) => {
+    ev.preventDefault();
+
+    if(!validateRequiredFields()) return;
+
+    const mailto = buildMailtoLink();
+    window.location.href = mailto;
+  });
+
   (async () => {
     await loadPublicCalendar();
-    renderCalendar();
+
+    // Feiertage für aktuelles Jahr vorab laden, damit Monatsansicht sofort Labels hat
+    await loadHolidaysForYear(new Date().getFullYear());
+
+    await renderCalendar();
     await refresh();
 
     calSelectedISO = todayISO;
-    renderCalendar();
+    await renderCalendar();
     showDaySlots(todayISO);
   })();
 })();
