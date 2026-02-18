@@ -297,7 +297,7 @@
   </div>
 
   <div class="row" style="margin-top:12px">
-    <a class="btn" id="cta" href="https://warnowmoments.de/reservierung" target="_blank" rel="noopener">
+    <a class="btn" id="cta" href="https://warnowmoments.de/reservierung-anfrage" target="_blank" rel="noopener">
       Reservierung anfragen
     </a>
     <a class="btn2" id="cta2" href="https://warnowmoments.de/contact" target="_blank" rel="noopener">
@@ -370,13 +370,7 @@
   const BLOCK_STATUSES = new Set(["reserved","confirmed"]);
 
   const CONTACT_URL = "https://warnowmoments.de/contact";
-  const RESERVATION_URL = "https://warnowmoments.de/reservierung";
-
-  const TO_EMAIL = "kontakt@warnowmoments.de";
-
-  const HOLIDAY_COUNTRY = "DE";
-  const HOLIDAY_COUNTY = "DE-MV";
-  const HOLIDAY_API_BASE = "https://date.nager.at/api/v3/PublicHolidays";
+  const RESERVATION_URL = "https://warnowmoments.de/reservierung-anfrage";
 
   const dateEl = document.getElementById("date");
   const pkgEl = document.getElementById("package");
@@ -422,6 +416,10 @@
   calCursor.setHours(0,0,0,0);
   let calSelectedISO = null;
 
+  const HOLIDAY_COUNTRY = "DE";
+  const HOLIDAY_COUNTY = "DE-MV";
+  const HOLIDAY_API_BASE = "https://date.nager.at/api/v3/PublicHolidays";
+
   const holidayByYear = new Map();
 
   function pad2(n){ return String(n).padStart(2,"0"); }
@@ -450,6 +448,7 @@
     if(m === 0) return `${h}h`;
     return `${h}h ${m}min`;
   }
+
   function escapeText(s){
     return String(s || "").replace(/\s+/g, " ").trim();
   }
@@ -490,40 +489,6 @@
 
     setError("");
     return true;
-  }
-
-  function buildMailtoLink(){
-    const dateISO = (dateEl.value || "").trim();
-    const pkgLabel = pkgEl.options[pkgEl.selectedIndex]?.textContent || "";
-    const startVal = (startEl.value || "").trim();
-
-    const name = escapeText(nameEl?.value);
-    const email = escapeText(emailEl?.value);
-    const phone = escapeText(phoneEl?.value);
-    const message = escapeText(messageEl?.value);
-
-    const subject = `Reservierungsanfrage ${dateISO} ${startVal}`.trim();
-
-    const lines = [
-      "Neue Reservierungsanfrage",
-      "",
-      `Datum: ${dateISO}`,
-      `Paket: ${pkgLabel}`,
-      `Startzeit: ${startVal}`,
-      "",
-      `Name: ${name}`,
-      `E-Mail: ${email}`,
-      `Telefon: ${phone}`,
-      "",
-      `Nachricht: ${message || "-"}`,
-    ];
-
-    const body = lines.join("\n");
-    const params = new URLSearchParams();
-    params.set("subject", subject);
-    params.set("body", body);
-
-    return `mailto:${encodeURIComponent(TO_EMAIL)}?${params.toString()}`;
   }
 
   async function loadPublicCalendar(){
@@ -668,14 +633,27 @@
       return;
     }
 
+    // Werte aus den oberen Feldern holen
+    const nameVal = escapeText(nameEl?.value);
+    const emailVal = escapeText(emailEl?.value);
+    const phoneVal = escapeText(phoneEl?.value);
+    const msgVal = escapeText(messageEl?.value);
+
     const q = new URLSearchParams();
+
+    // Sichtbare Parameter
     q.set("date", dateISO);
     q.set("start", startVal);
     if(pkgLabel) q.set("paket", pkgLabel);
 
-    q.set("SQF_date", dateISO);
-    q.set("SQF_start", startVal);
+    // Technische Parameter für Squarespace-Formular (SQF_*)
+    if(nameVal)  q.set("SQF_name",   nameVal);
+    if(emailVal) q.set("SQF_email",  emailVal);
+    if(phoneVal) q.set("SQF_phone",  phoneVal);
+    q.set("SQF_date",  dateISO);
     if(pkgLabel) q.set("SQF_paket", pkgLabel);
+    q.set("SQF_start", startVal);
+    if(msgVal)   q.set("SQF_message", msgVal);
 
     ctaEl.href = `${RESERVATION_URL}?${q.toString()}`;
     selectedPillEl.textContent = `Auswahl: ${dateISO} • ${pkgLabel} • ${startVal}`;
@@ -703,7 +681,6 @@
       const { allowed, lastStartTsHour } = computeAllowedStartHours(dateISO, sunset, duration);
       const filtered = filterByBookings(dateISO, duration, allowed);
 
-      // NEU: Select oben nutzt exakt diese Logik (identisch zu den Buttons unten)
       setStartOptions(filtered, previouslySelected);
 
       const sunsetText = sunset.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
@@ -1110,14 +1087,7 @@
 
   startEl.addEventListener("change", updateCtas);
 
-  ctaEl?.addEventListener("click", (ev) => {
-    ev.preventDefault();
-    if(!validateRequiredFields()) return;
-    window.location.href = buildMailtoLink();
-  });
-
   // --- iFrame Auto-Height (Child -> Parent) ---
-  // Cross-origin: Parent darf Höhe nicht direkt lesen, daher postMessage. [web:179]
   function wmPostHeight(){
     const h = Math.max(
       document.documentElement.scrollHeight,
@@ -1160,7 +1130,6 @@
     await refresh();
     showDaySlots(todayISO);
 
-    // einmal nach initialem Render nochmal Höhe senden
     wmPostHeight();
   })();
 })();
