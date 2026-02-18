@@ -369,17 +369,14 @@
   const PUBLIC_CAL_URL = "./wm_public_calendar.json";
   const BLOCK_STATUSES = new Set(["reserved","confirmed"]);
 
-  // Squarespace Ziele:
   const CONTACT_URL = "https://warnowmoments.de/contact";
   const RESERVATION_URL = "https://warnowmoments.de/reservierung";
 
-  // Ziel-Mailadresse
   const TO_EMAIL = "kontakt@warnowmoments.de";
 
-  // Feiertage (Nager.Date API, CORS enabled, no rate limit) [page:0]
   const HOLIDAY_COUNTRY = "DE";
-  const HOLIDAY_COUNTY = "DE-MV"; // Mecklenburg-Vorpommern (ISO-3166-2), Filter via "counties" Feld [page:0]
-  const HOLIDAY_API_BASE = "https://date.nager.at/api/v3/PublicHolidays"; // /{Year}/{CountryCode} [page:0]
+  const HOLIDAY_COUNTY = "DE-MV";
+  const HOLIDAY_API_BASE = "https://date.nager.at/api/v3/PublicHolidays";
 
   const dateEl = document.getElementById("date");
   const pkgEl = document.getElementById("package");
@@ -420,7 +417,11 @@
   let publicEvents = [];
   let publicCalendarState = "unknown";
 
-  // Feiertage Cache: Map<year, Map<dateISO, localName>>
+  let calCursor = new Date();
+  calCursor.setDate(1);
+  calCursor.setHours(0,0,0,0);
+  let calSelectedISO = null;
+
   const holidayByYear = new Map();
 
   function pad2(n){ return String(n).padStart(2,"0"); }
@@ -449,7 +450,6 @@
     if(m === 0) return `${h}h`;
     return `${h}h ${m}min`;
   }
-
   function escapeText(s){
     return String(s || "").replace(/\s+/g, " ").trim();
   }
@@ -552,7 +552,6 @@
   }
 
   function holidayAppliesToMV(h){
-    // Nager.Date Modell: "global" oder "counties" mit ISO-3166-2 Codes [page:0]
     if(!h) return false;
     if(h.global === true) return true;
     if(Array.isArray(h.counties) && h.counties.includes(HOLIDAY_COUNTY)) return true;
@@ -579,15 +578,8 @@
       }
       holidayByYear.set(year, map);
     } catch(e){
-      // Bei Fehler: leere Map setzen, damit wir nicht dauernd neu fetchen
       holidayByYear.set(year, new Map());
     }
-  }
-
-  function getHolidayNameForISO(iso){
-    const y = Number(String(iso).slice(0,4));
-    const m = holidayByYear.get(y);
-    return m ? (m.get(iso) || "") : "";
   }
 
   async function getSunsetLocal(dateISO){
@@ -828,7 +820,7 @@
     const scaleHours = [TL_START_HOUR, TL_START_HOUR+3, TL_START_HOUR+6, TL_END_HOUR];
     for(const h of scaleHours){
       const sp = document.createElement("span");
-      sp.textContent = `${pad2(h)}:00`;
+      sp.textContent = `${String(h).padStart(2,"0")}:00`;
       tlScaleEl.appendChild(sp);
     }
 
@@ -887,13 +879,29 @@
     }
   }
 
-  document.addEventListener("click", () => {
-    if(tipEl?.getAttribute("data-pinned") === "1") tipClose();
-  });
-  tipCloseEl?.addEventListener("click", (ev) => {
-    ev.stopPropagation();
-    tipClose();
-  });
+  async function showDaySlots(dayISO){
+    calDayTitleEl.textContent = `Freie Startzeiten am ${dayISO} (für das ausgewählte Paket):`;
+    calSlotsEl.innerHTML = "";
+
+    try{
+      const sunset = await getSunsetLocal(dayISO);
+      const duration = Number(pkgEl.value);
+
+      const { allowed } = computeAllowedStartHours(dayISO, sunset, duration);
+      const filtered = filterByBookings(dayISO, duration, allowed);
+
+      buildSlotButtons(dayISO, filtered);
+      renderBlocksList(dayISO);
+      renderTimeline(dayISO);
+    } catch(e){
+      const span = document.createElement("span");
+      span.className = "muted";
+      span.textContent = "Slots konnten nicht berechnet werden (Sonnenuntergang nicht verfügbar).";
+      calSlotsEl.appendChild(span);
+      renderBlocksList(dayISO);
+      renderTimeline(dayISO);
+    }
+  }
 
   function countBlocksOnDay(iso){
     const aStart = new Date(iso + "T00:00:00").getTime();
@@ -929,7 +937,9 @@
       btn.addEventListener("click", async () => {
         const useISO = calSelectedISO || dayISO;
 
+        calSelectedISO = useISO;
         dateEl.value = useISO;
+
         await refresh();
 
         startEl.value = fmtTime(h);
@@ -939,30 +949,6 @@
       });
 
       calSlotsEl.appendChild(btn);
-    }
-  }
-
-  async function showDaySlots(dayISO){
-    calDayTitleEl.textContent = `Freie Startzeiten am ${dayISO} (für das ausgewählte Paket):`;
-    calSlotsEl.innerHTML = "";
-
-    try{
-      const sunset = await getSunsetLocal(dayISO);
-      const duration = Number(pkgEl.value);
-
-      const { allowed } = computeAllowedStartHours(dayISO, sunset, duration);
-      const filtered = filterByBookings(dayISO, duration, allowed);
-
-      buildSlotButtons(dayISO, filtered);
-      renderBlocksList(dayISO);
-      renderTimeline(dayISO);
-    } catch(e){
-      const span = document.createElement("span");
-      span.className = "muted";
-      span.textContent = "Slots konnten nicht berechnet werden (Sonnenuntergang nicht verfügbar).";
-      calSlotsEl.appendChild(span);
-      renderBlocksList(dayISO);
-      renderTimeline(dayISO);
     }
   }
 
@@ -1040,7 +1026,6 @@
       num.textContent = String(day);
       cell.appendChild(num);
 
-      // Feiertag: Name linksbündig auf Höhe der Zahl (direkt darunter, gleiche Flucht)
       const holidayName = holidayMap.get(iso) || "";
       if(holidayName){
         const h = document.createElement("div");
@@ -1105,38 +1090,49 @@
     showDaySlots(calSelectedISO);
   });
 
-  pkgEl?.addEventListener("change", () => {
+  pkgEl?.addEventListener("change", async () => {
+    await refresh();
     if(calSelectedISO) showDaySlots(calSelectedISO);
   });
 
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  const todayISO = today.toISOString().slice(0,10);
-  dateEl.value = todayISO;
+  dateEl.addEventListener("change", async () => {
+    calSelectedISO = dateEl.value || null;
+    await refresh();
+    if(calSelectedISO) {
+      calCursor = new Date(calSelectedISO + "T00:00:00");
+      calCursor.setDate(1);
+      calCursor.setHours(0,0,0,0);
+      await renderCalendar();
+      showDaySlots(calSelectedISO);
+    }
+  });
 
-  dateEl.addEventListener("change", refresh);
   startEl.addEventListener("change", updateCtas);
 
   ctaEl?.addEventListener("click", (ev) => {
     ev.preventDefault();
-
     if(!validateRequiredFields()) return;
-
-    const mailto = buildMailtoLink();
-    window.location.href = mailto;
+    window.location.href = buildMailtoLink();
   });
 
   (async () => {
     await loadPublicCalendar();
-
-    // Feiertage für aktuelles Jahr vorab laden, damit Monatsansicht sofort Labels hat
     await loadHolidaysForYear(new Date().getFullYear());
+
+    const t = new Date();
+    t.setHours(0,0,0,0);
+    const todayISO = t.toISOString().slice(0,10);
+
+    dateEl.value = todayISO;
+
+    // NEU: Kalender/Tag direkt initial auswählen und anzeigen
+    calSelectedISO = todayISO;
+    calCursor = new Date(todayISO + "T00:00:00");
+    calCursor.setDate(1);
+    calCursor.setHours(0,0,0,0);
 
     await renderCalendar();
     await refresh();
-
-    calSelectedISO = todayISO;
-    await renderCalendar();
     showDaySlots(todayISO);
   })();
 })();
