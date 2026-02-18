@@ -641,19 +641,19 @@
 
     const q = new URLSearchParams();
 
-    // Sichtbare Parameter
+    // Sichtbare Parameter (oben im Pill)
     q.set("date", dateISO);
     q.set("start", startVal);
     if(pkgLabel) q.set("paket", pkgLabel);
 
-    // Technische Parameter für Squarespace-Formular (SQF_*)
-    if(nameVal)  q.set("SQF_name",   nameVal);
-    if(emailVal) q.set("SQF_email",  emailVal);
-    if(phoneVal) q.set("SQF_phone",  phoneVal);
+    // SQF Parameter FÜR ALLE 7 Form‑Felder
+    if(nameVal)   q.set("SQF_name",   nameVal);
+    if(emailVal)  q.set("SQF_email",  emailVal);
+    if(phoneVal)  q.set("SQF_phone",  phoneVal);
     q.set("SQF_date",  dateISO);
-    if(pkgLabel) q.set("SQF_paket", pkgLabel);
+    if(pkgLabel)  q.set("SQF_paket",  pkgLabel);
     q.set("SQF_start", startVal);
-    if(msgVal)   q.set("SQF_message", msgVal);
+    if(msgVal)    q.set("SQF_message", msgVal);
 
     ctaEl.href = `${RESERVATION_URL}?${q.toString()}`;
     selectedPillEl.textContent = `Auswahl: ${dateISO} • ${pkgLabel} • ${startVal}`;
