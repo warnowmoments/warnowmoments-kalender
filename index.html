@@ -297,12 +297,14 @@
   </div>
 
   <div class="row" style="margin-top:12px">
-    <a class="btn" id="cta" href="https://warnowmoments.de/reservierung-anfrage" target="_blank" rel="noopener">
-      Reservierung anfragen
-    </a>
+    <!-- GEÄNDERT: war <a href="...reservierung-anfrage"...> -->
+    <button class="btn" id="cta" type="button">Reservierung anfragen</button>
+
     <a class="btn2" id="cta2" href="https://warnowmoments.de/contact" target="_blank" rel="noopener">
       Kontaktformular öffnen
     </a>
+
+    <span class="muted" id="cta-status" aria-live="polite"></span>
   </div>
 
   <p class="muted" style="margin-top:12px">
@@ -372,6 +374,9 @@
   const CONTACT_URL = "https://warnowmoments.de/contact";
   const RESERVATION_URL = "https://warnowmoments.de/reservierung-anfrage";
 
+  // NEU: Worker-URL
+  const WORKER_URL = "https://reservierung-mail.kontakt-70d.workers.dev";
+
   const dateEl = document.getElementById("date");
   const pkgEl = document.getElementById("package");
   const startEl = document.getElementById("start");
@@ -379,6 +384,7 @@
   const errEl = document.getElementById("err");
   const ctaEl = document.getElementById("cta");
   const cta2El = document.getElementById("cta2");
+  const ctaStatusEl = document.getElementById("cta-status");
   const selectedPillEl = document.getElementById("selected-pill");
   const sunsetPillEl = document.getElementById("sunset-pill");
   const publicPillEl = document.getElementById("public-pill");
@@ -416,6 +422,9 @@
   calCursor.setHours(0,0,0,0);
   let calSelectedISO = null;
 
+  // NEU: letzter Payload, damit Button-Klick immer das gleiche sendet wie die Anzeige
+  let lastPayload = null;
+
   const HOLIDAY_COUNTRY = "DE";
   const HOLIDAY_COUNTY = "DE-MV";
   const HOLIDAY_API_BASE = "https://date.nager.at/api/v3/PublicHolidays";
@@ -427,6 +436,10 @@
   function setError(msg){
     errEl.style.display = msg ? "block" : "none";
     errEl.textContent = msg || "";
+  }
+  function setCtaStatus(msg){
+    if(!ctaStatusEl) return;
+    ctaStatusEl.textContent = msg || "";
   }
   function rangesOverlap(aStart,aEnd,bStart,bEnd){
     return aStart < bEnd && bStart < aEnd;
@@ -449,6 +462,7 @@
     return `${h}h ${m}min`;
   }
 
+  // KORRIGIERT: vorher \\s (matcht kein Whitespace), jetzt \s
   function escapeText(s){
     return String(s || "").replace(/\s+/g, " ").trim();
   }
@@ -628,34 +642,32 @@
     cta2El.href = CONTACT_URL;
 
     if(!dateISO || !startVal || startEl.disabled){
-      ctaEl.href = RESERVATION_URL;
       selectedPillEl.textContent = "Auswahl: –";
+      lastPayload = null;
       return;
     }
 
-    // Werte aus den oberen Feldern holen
     const nameVal = escapeText(nameEl?.value);
     const emailVal = escapeText(emailEl?.value);
     const phoneVal = escapeText(phoneEl?.value);
     const msgVal = escapeText(messageEl?.value);
 
-    const q = new URLSearchParams();
+    // Payload für Worker (immer aktuell halten)
+    lastPayload = {
+      SQF_name: nameVal,
+      SQF_email: emailVal,
+      SQF_phone: phoneVal,
+      SQF_message: msgVal,
+      SQF_date: dateISO,
+      SQF_start: startVal,
+      SQF_paket: pkgLabel,
+      date: dateISO,
+      start: startVal,
+      paket: pkgLabel,
+      source: "wm-pages",
+      page: location.href
+    };
 
-    // Sichtbare Parameter (oben im Pill)
-    q.set("date", dateISO);
-    q.set("start", startVal);
-    if(pkgLabel) q.set("paket", pkgLabel);
-
-    // SQF Parameter FÜR ALLE 7 Form‑Felder
-    if(nameVal)   q.set("SQF_name",   nameVal);
-    if(emailVal)  q.set("SQF_email",  emailVal);
-    if(phoneVal)  q.set("SQF_phone",  phoneVal);
-    q.set("SQF_date",  dateISO);
-    if(pkgLabel)  q.set("SQF_paket",  pkgLabel);
-    q.set("SQF_start", startVal);
-    if(msgVal)    q.set("SQF_message", msgVal);
-
-    ctaEl.href = `${RESERVATION_URL}?${q.toString()}`;
     selectedPillEl.textContent = `Auswahl: ${dateISO} • ${pkgLabel} • ${startVal}`;
   }
 
@@ -663,6 +675,7 @@
     setError("");
     hintEl.textContent = "";
     sunsetPillEl.textContent = "";
+    setCtaStatus("");
 
     const dateISO = dateEl.value;
     const duration = Number(pkgEl.value);
@@ -704,6 +717,46 @@
       setError("Konnte Sonnenuntergang nicht berechnen. Bitte später erneut versuchen oder direkt kontaktieren.");
       setStartOptions([], "");
       updateCtas();
+    }
+  }
+
+  // NEU: Button-Klick -> Worker-POST
+  async function submitReservation(){
+    if(!validateRequiredFields()) return;
+
+    updateCtas(); // lastPayload aktualisieren
+    if(!lastPayload){
+      setError("Bitte Auswahl vollständig machen (Datum/Paket/Startzeit).");
+      return;
+    }
+
+    const oldText = ctaEl.textContent;
+    ctaEl.disabled = true;
+    ctaEl.textContent = "Sende…";
+    setCtaStatus("");
+
+    try{
+      const res = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lastPayload)
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if(!res.ok || json.ok !== true){
+        throw new Error("Worker/Mail fehlgeschlagen");
+      }
+
+      ctaEl.textContent = "Gesendet";
+      setCtaStatus("Anfrage wurde versendet.");
+      setTimeout(() => { ctaEl.textContent = oldText; }, 2500);
+    } catch(e){
+      setError("Senden fehlgeschlagen. Prüfe DNS (_mailchannels) + Worker-Logs.");
+      setCtaStatus("");
+      ctaEl.textContent = oldText;
+    } finally {
+      ctaEl.disabled = false;
     }
   }
 
@@ -1086,6 +1139,9 @@
   });
 
   startEl.addEventListener("change", updateCtas);
+
+  // NEU: CTA Klick-Handler aktivieren
+  ctaEl?.addEventListener("click", submitReservation);
 
   // --- iFrame Auto-Height (Child -> Parent) ---
   function wmPostHeight(){
