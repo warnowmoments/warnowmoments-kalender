@@ -375,7 +375,7 @@
   const RESERVATION_URL = "https://warnowmoments.de/reservierung-anfrage";
 
   // NEU: Worker-URL
-  const WORKER_URL = "https://reservierung-mail.kontakt-70d.workers.dev";
+  const WORKERURL = "https://reservierung-v2.kontakt-70d.workers.dev/";
 
   const dateEl = document.getElementById("date");
   const pkgEl = document.getElementById("package");
@@ -721,44 +721,53 @@
   }
 
   // NEU: Button-Klick -> Worker-POST
-  async function submitReservation(){
-    if(!validateRequiredFields()) return;
+async function submitReservation(){
+  if(!validateRequiredFields()) return;
 
-    updateCtas(); // lastPayload aktualisieren
-    if(!lastPayload){
-      setError("Bitte Auswahl vollständig machen (Datum/Paket/Startzeit).");
-      return;
-    }
-
-    const oldText = ctaEl.textContent;
-    ctaEl.disabled = true;
-    ctaEl.textContent = "Sende…";
-    setCtaStatus("");
-
-    try{
-      const res = await fetch(WORKER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(lastPayload)
-      });
-
-      const json = await res.json().catch(() => ({}));
-
-      if(!res.ok || json.ok !== true){
-        throw new Error("Worker/Mail fehlgeschlagen");
-      }
-
-      ctaEl.textContent = "Gesendet";
-      setCtaStatus("Anfrage wurde versendet.");
-      setTimeout(() => { ctaEl.textContent = oldText; }, 2500);
-    } catch(e){
-      setError("Senden fehlgeschlagen. Prüfe DNS (_mailchannels) + Worker-Logs.");
-      setCtaStatus("");
-      ctaEl.textContent = oldText;
-    } finally {
-      ctaEl.disabled = false;
-    }
+  updateCtas(); // lastPayload aktualisieren
+  if(!lastPayload){
+    setError("Bitte Auswahl vollständig machen (Datum/Paket/Startzeit).");
+    return;
   }
+
+  const oldText = ctaEl.textContent;
+  ctaEl.disabled = true;
+  ctaEl.textContent = "Sende…";
+  setCtaStatus("");
+
+  try{
+    console.log("🧪 Sende Payload:", lastPayload); // DEBUG
+
+    const res = await fetch(WORKERURL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(lastPayload)
+    });
+
+    const text = await res.text(); // RAW erst lesen!
+    console.log("📡 Worker raw:", text); // DEBUG
+
+    const json = JSON.parse(text || "{}");
+
+    if(!res.ok){
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+    if(!json.ok){
+      throw new Error(`Worker sagt ${json.error || 'Fehler'}`);
+    }
+
+    ctaEl.textContent = "Gesendet ✓";
+    setCtaStatus("Anfrage wurde versendet.");
+    setTimeout(() => { ctaEl.textContent = oldText; }, 2500);
+  } catch(e){
+    console.error("❌ Submit Fehler:", e); // DEBUG
+    setError("Senden fehlgeschlagen: " + e.message);
+    setCtaStatus("");
+    ctaEl.textContent = oldText;
+  } finally {
+    ctaEl.disabled = false;
+  }
+}
 
   function isAllDayLike(startMs, endMs){
     const s = new Date(startMs);
