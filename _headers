@@ -1,2 +1,6 @@
 /*
-  Content-Security-Policy: frame-ancestors https://warnowmoments.de https://www.warnowmoments.de;
+  X-Frame-Options: ALLOWALL
+  Content-Security-Policy: frame-ancestors *
+/**
+  X-Frame-Options: ALLOWALL
+  Content-Security-Policy: frame-ancestors *
