@@ -1185,8 +1185,6 @@ async function submitReservation(){
     t.setHours(0,0,0,0);
     const todayISO = t.toISOString().slice(0,10);
 
-    dateEl.value = todayISO;
-
     calSelectedISO = todayISO;
     calCursor = new Date(todayISO + "T00:00:00");
     calCursor.setDate(1);
@@ -1196,8 +1194,13 @@ async function submitReservation(){
     await refresh();
     showDaySlots(todayISO);
 
+    // ✅ DOM ready + Input setzen
+    dateEl.value = todayISO;
+    updateCtas();
+
     wmPostHeight();
-  })();
+})();
+
 })();
 </script>
 
