@@ -749,12 +749,8 @@ async function submitReservation(){
 
     const json = JSON.parse(text || "{}");
 
-    if(!res.ok){
-      throw new Error(`HTTP ${res.status}: ${text}`);
-    }
-    if(!json.ok){
-      throw new Error(`Worker sagt ${json.error || 'Fehler'}`);
-    }
+    async function submitReservation(){
+  if(!validateRequiredFields())
 
     ctaEl.textContent = "Gesendet ✓";
     setCtaStatus("Anfrage wurde versendet.");
