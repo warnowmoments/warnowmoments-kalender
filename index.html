@@ -297,13 +297,10 @@
   </div>
 
   <div class="row" style="margin-top:12px">
-    <!-- GEÄNDERT: war <a href="...reservierung-anfrage"...> -->
     <button class="btn" id="cta" type="button">Reservierung anfragen</button>
-
     <a class="btn2" id="cta2" href="https://warnowmoments.de/contact" target="_blank" rel="noopener">
       Kontaktformular öffnen
     </a>
-
     <span class="muted" id="cta-status" aria-live="polite"></span>
   </div>
 
@@ -372,23 +369,19 @@
   const BLOCK_STATUSES = new Set(["reserved","confirmed"]);
 
   const CONTACT_URL = "https://warnowmoments.de/contact";
-  const RESERVATION_URL = "https://warnowmoments.de/reservierung-anfrage";
-
-  // NEU: Worker-URL
   const WORKERURL = "https://reservierung-v2.kontakt-70d.workers.dev/";
 
+  // Elemente
   const dateEl = document.getElementById("date");
   const pkgEl = document.getElementById("package");
   const startEl = document.getElementById("start");
   const hintEl = document.getElementById("hint");
   const errEl = document.getElementById("err");
   const ctaEl = document.getElementById("cta");
-  const cta2El = document.getElementById("cta2");
   const ctaStatusEl = document.getElementById("cta-status");
   const selectedPillEl = document.getElementById("selected-pill");
   const sunsetPillEl = document.getElementById("sunset-pill");
   const publicPillEl = document.getElementById("public-pill");
-
   const nameEl = document.getElementById("name");
   const emailEl = document.getElementById("email");
   const phoneEl = document.getElementById("phone");
@@ -407,7 +400,6 @@
   const tlWrapEl = document.getElementById("cal-timeline-wrap");
   const tlScaleEl = document.getElementById("cal-timeline-scale");
   const tlBarEl = document.getElementById("cal-timeline-bar");
-
   const tipEl = document.getElementById("tl-tip");
   const tipCloseEl = document.getElementById("tl-tip-close");
   const tipTitleEl = document.getElementById("tl-tip-title");
@@ -416,20 +408,14 @@
 
   let publicEvents = [];
   let publicCalendarState = "unknown";
-
   let calCursor = new Date();
-  calCursor.setDate(1);
-  calCursor.setHours(0,0,0,0);
   let calSelectedISO = null;
-
-  // NEU: letzter Payload, damit Button-Klick immer das gleiche sendet wie die Anzeige
   let lastPayload = null;
+  let holidayByYear = new Map();
 
   const HOLIDAY_COUNTRY = "DE";
   const HOLIDAY_COUNTY = "DE-MV";
   const HOLIDAY_API_BASE = "https://date.nager.at/api/v3/PublicHolidays";
-
-  const holidayByYear = new Map();
 
   function pad2(n){ return String(n).padStart(2,"0"); }
   function fmtTime(h){ return `${pad2(h)}:00`; }
@@ -461,48 +447,20 @@
     if(m === 0) return `${h}h`;
     return `${h}h ${m}min`;
   }
-
-  // KORRIGIERT: vorher \\s (matcht kein Whitespace), jetzt \s
   function escapeText(s){
     return String(s || "").replace(/\s+/g, " ").trim();
   }
 
-  function validateRequiredFields(){
-    const required = [
-      { el: nameEl, msg: "Bitte Name eingeben." },
-      { el: emailEl, msg: "Bitte E‑Mail Adresse eingeben." },
-      { el: phoneEl, msg: "Bitte Telefonnummer eingeben." },
-      { el: dateEl, msg: "Bitte Datum auswählen." },
-      { el: pkgEl, msg: "Bitte Paket auswählen." },
-      { el: startEl, msg: "Bitte Startzeit auswählen." },
-    ];
+  function getTodayISO(){
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    return today.toISOString().slice(0,10);
+  }
 
-    for(const r of required){
-      if(!r.el) continue;
-
-      if(r.el === startEl && startEl.disabled){
-        setError("Bitte Datum/Paket so wählen, dass eine Startzeit verfügbar ist (oder Kontaktformular öffnen).");
-        startEl.focus?.();
-        return false;
-      }
-
-      const val = (r.el.value || "").trim();
-      if(!val){
-        setError(r.msg);
-        r.el.focus?.();
-        return false;
-      }
-
-      if(typeof r.el.checkValidity === "function" && !r.el.checkValidity()){
-        setError(r.msg);
-        r.el.reportValidity?.();
-        r.el.focus?.();
-        return false;
-      }
-    }
-
-    setError("");
-    return true;
+  function setTodayDate(){
+    const todayISO = getTodayISO();
+    dateEl.value = todayISO;
+    calSelectedISO = todayISO;
   }
 
   async function loadPublicCalendar(){
@@ -510,7 +468,6 @@
       const res = await fetch(PUBLIC_CAL_URL, { cache: "no-store" });
       if(!res.ok) throw new Error("public calendar fetch failed");
       const data = await res.json();
-
       const ev = Array.isArray(data?.events) ? data.events : [];
       publicEvents = ev
         .filter(e => e && BLOCK_STATUSES.has(String(e.status)))
@@ -520,7 +477,6 @@
           endMs: new Date(e.end).getTime()
         }))
         .filter(e => Number.isFinite(e.startMs) && Number.isFinite(e.endMs) && e.endMs > e.startMs);
-
       publicCalendarState = publicEvents.length ? "loaded" : "empty";
       publicPillEl.textContent = "";
     } catch(e){
@@ -539,13 +495,11 @@
 
   async function loadHolidaysForYear(year){
     if(holidayByYear.has(year)) return;
-
     try{
       const url = `${HOLIDAY_API_BASE}/${year}/${HOLIDAY_COUNTRY}`;
       const res = await fetch(url, { cache: "force-cache" });
       if(!res.ok) throw new Error("holiday fetch failed");
       const data = await res.json();
-
       const map = new Map();
       if(Array.isArray(data)){
         for(const h of data){
@@ -579,7 +533,6 @@
   function computeAllowedStartHours(dateISO, sunsetLocal, durationHours){
     const lastStartTsExact = sunsetLocal.getTime() - (durationHours*60 + RETURN_BUFFER_MIN) * 60 * 1000;
     const lastStartTsHour = floorToFullHour(lastStartTsExact);
-
     const allowed = [];
     for(let h=HOURS_MIN; h<=HOURS_MAX; h++){
       const candidate = new Date(dateISO + "T00:00:00");
@@ -610,7 +563,6 @@
 
   function setStartOptions(hours, preferredValue){
     startEl.innerHTML = "";
-
     if(!hours.length){
       const opt = document.createElement("option");
       opt.value = "";
@@ -619,9 +571,7 @@
       startEl.disabled = true;
       return;
     }
-
     startEl.disabled = false;
-
     for(const h of hours){
       const v = fmtTime(h);
       const opt = document.createElement("option");
@@ -629,7 +579,6 @@
       opt.textContent = v;
       startEl.appendChild(opt);
     }
-
     const canUsePreferred = preferredValue && [...startEl.options].some(o => o.value === preferredValue);
     startEl.value = canUsePreferred ? preferredValue : startEl.options[0].value;
   }
@@ -638,21 +587,15 @@
     const dateISO = dateEl.value;
     const pkgLabel = pkgEl.options[pkgEl.selectedIndex]?.textContent || "";
     const startVal = startEl.value || "";
-
-    cta2El.href = CONTACT_URL;
-
     if(!dateISO || !startVal || startEl.disabled){
       selectedPillEl.textContent = "Auswahl: –";
       lastPayload = null;
       return;
     }
-
     const nameVal = escapeText(nameEl?.value);
     const emailVal = escapeText(emailEl?.value);
     const phoneVal = escapeText(phoneEl?.value);
     const msgVal = escapeText(messageEl?.value);
-
-    // Payload für Worker (immer aktuell halten)
     lastPayload = {
       SQF_name: nameVal,
       SQF_email: emailVal,
@@ -667,7 +610,6 @@
       source: "wm-pages",
       page: location.href
     };
-
     selectedPillEl.textContent = `Auswahl: ${dateISO} • ${pkgLabel} • ${startVal}`;
   }
 
@@ -676,42 +618,30 @@
     hintEl.textContent = "";
     sunsetPillEl.textContent = "";
     setCtaStatus("");
-
     const dateISO = dateEl.value;
     const duration = Number(pkgEl.value);
-
     if(!dateISO){
       setStartOptions([], "");
       hintEl.textContent = "Bitte Datum auswählen.";
       updateCtas();
       return;
     }
-
     try{
       const sunset = await getSunsetLocal(dateISO);
       const previouslySelected = startEl.value;
-
       const { allowed, lastStartTsHour } = computeAllowedStartHours(dateISO, sunset, duration);
       const filtered = filterByBookings(dateISO, duration, allowed);
-
       setStartOptions(filtered, previouslySelected);
-
       const sunsetText = sunset.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
       sunsetPillEl.textContent = `Sonnenuntergang: ca. ${sunsetText} Uhr`;
-
       const lastStart = new Date(lastStartTsHour);
       const lastStartText = lastStart.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
-
       if(filtered.length === 0){
-        const calNote = (publicCalendarState === "failed")
-          ? " Hinweis: Kalender konnte nicht geladen werden."
-          : "";
+        const calNote = (publicCalendarState === "failed") ? " Hinweis: Kalender konnte nicht geladen werden." : "";
         hintEl.textContent = `Keine Startzeit verfügbar (bereits belegt).${calNote}`;
       } else {
-        hintEl.textContent =
-          `Letzter möglicher Start (volle Stunde) für dieses Paket: ${lastStartText} Uhr (inkl. 30 Min Rückgabe-Puffer).`;
+        hintEl.textContent = `Letzter möglicher Start (volle Stunde) für dieses Paket: ${lastStartText} Uhr (inkl. 30 Min Rückgabe-Puffer).`;
       }
-
       updateCtas();
     } catch(e){
       setError("Konnte Sonnenuntergang nicht berechnen. Bitte später erneut versuchen oder direkt kontaktieren.");
@@ -719,55 +649,79 @@
       updateCtas();
     }
   }
-async function submitReservation(){
-  if(!validateRequiredFields()) return;
 
-  updateCtas(); // lastPayload aktualisieren
-  if(!lastPayload){
-    setError("Bitte Auswahl vollständig machen (Datum/Paket/Startzeit).");
-    return;
-  }
-
-  const oldText = ctaEl.textContent;
-  ctaEl.disabled = true;
-  ctaEl.textContent = "Sende…";
-  setCtaStatus("");
-
-  try{
-    console.log("🧪 Sende Payload:", lastPayload); // DEBUG
-
-    const res = await fetch(WORKERURL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(lastPayload)
-    });
-
-    const text = await res.text(); // RAW erst lesen!
-    console.log("📡 Worker raw:", text); // DEBUG
-
-    const json = JSON.parse(text || "{}");
-
-    // ✅ HTTP-OK → Erfolg (auch wenn Worker "Fehler" murmelt)
-    if(res.ok){
-      ctaEl.textContent = "Gesendet ✓";
-      setCtaStatus("Anfrage wurde versendet.");
-      setTimeout(() => { ctaEl.textContent = oldText; }, 2500);
-      return; // Erfolg!
+  async function submitReservation(){
+    if(!validateRequiredFields()) return;
+    updateCtas();
+    if(!lastPayload){
+      setError("Bitte Auswahl vollständig machen (Datum/Paket/Startzeit).");
+      return;
     }
-
-    // ❌ Nur echte HTTP-Fehler werfen
-    throw new Error(`HTTP ${res.status}: ${text}`);
-    
-  } catch(e){
-    console.error("❌ Submit Fehler:", e); // DEBUG
-    setError("Senden fehlgeschlagen: " + e.message);
+    const oldText = ctaEl.textContent;
+    ctaEl.disabled = true;
+    ctaEl.textContent = "Sende…";
     setCtaStatus("");
-    ctaEl.textContent = oldText;
-  } finally {
-    ctaEl.disabled = false;
+    try{
+      console.log("🧪 Sende Payload:", lastPayload);
+      const res = await fetch(WORKERURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lastPayload)
+      });
+      const text = await res.text();
+      console.log("📡 Worker raw:", text);
+      const json = JSON.parse(text || "{}");
+      if(res.ok){
+        ctaEl.textContent = "Gesendet ✓";
+        setCtaStatus("Anfrage wurde versendet.");
+        setTimeout(() => { ctaEl.textContent = oldText; }, 2500);
+        return;
+      }
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    } catch(e){
+      console.error("❌ Submit Fehler:", e);
+      setError("Senden fehlgeschlagen: " + e.message);
+      setCtaStatus("");
+      ctaEl.textContent = oldText;
+    } finally {
+      ctaEl.disabled = false;
+    }
   }
-}
 
+  function validateRequiredFields(){
+    const required = [
+      { el: nameEl, msg: "Bitte Name eingeben." },
+      { el: emailEl, msg: "Bitte E‑Mail Adresse eingeben." },
+      { el: phoneEl, msg: "Bitte Telefonnummer eingeben." },
+      { el: dateEl, msg: "Bitte Datum auswählen." },
+      { el: pkgEl, msg: "Bitte Paket auswählen." },
+      { el: startEl, msg: "Bitte Startzeit auswählen." },
+    ];
+    for(const r of required){
+      if(!r.el) continue;
+      if(r.el === startEl && startEl.disabled){
+        setError("Bitte Datum/Paket so wählen, dass eine Startzeit verfügbar ist (oder Kontaktformular öffnen).");
+        startEl.focus?.();
+        return false;
+      }
+      const val = (r.el.value || "").trim();
+      if(!val){
+        setError(r.msg);
+        r.el.focus?.();
+        return false;
+      }
+      if(typeof r.el.checkValidity === "function" && !r.el.checkValidity()){
+        setError(r.msg);
+        r.el.reportValidity?.();
+        r.el.focus?.();
+        return false;
+      }
+    }
+    setError("");
+    return true;
+  }
+
+  // Kalender-Funktionen
   function isAllDayLike(startMs, endMs){
     const s = new Date(startMs);
     const e = new Date(endMs);
@@ -779,7 +733,6 @@ async function submitReservation(){
   function getBlocksForDay(dayISO){
     const dayStart = new Date(dayISO + "T00:00:00").getTime();
     const dayEnd = new Date(dayISO + "T23:59:59").getTime();
-
     return publicEvents
       .filter(e => rangesOverlap(dayStart, dayEnd, e.startMs, e.endMs))
       .map(e => {
@@ -791,32 +744,22 @@ async function submitReservation(){
   }
 
   function renderBlocksList(dayISO){
-    if(!calBlocksEl || !calBlocksTitleEl) return;
-
     const blocks = getBlocksForDay(dayISO);
     calBlocksEl.innerHTML = "";
-
     if(!blocks.length){
       calBlocksTitleEl.textContent = "";
       return;
     }
-
     calBlocksTitleEl.textContent = "Belegungen an diesem Tag:";
-
     for(const b of blocks){
       const row = document.createElement("div");
       row.className = "muted";
       row.style.fontWeight = "800";
       row.style.marginTop = "6px";
-
       const label = b.status === "confirmed" ? "Gebucht" : "Reserviert";
       const allDay = isAllDayLike(b.startMs, b.endMs);
       const dur = fmtDuration(b.endMs - b.startMs);
-
-      row.textContent = allDay
-        ? `${label}: Ganztag (${dur})`
-        : `${label}: ${fmtHM(b.startMs)}–${fmtHM(b.endMs)} (${dur})`;
-
+      row.textContent = allDay ? `${label}: Ganztag (${dur})` : `${label}: ${fmtHM(b.startMs)}–${fmtHM(b.endMs)} (${dur})`;
       calBlocksEl.appendChild(row);
     }
   }
@@ -828,33 +771,24 @@ async function submitReservation(){
 
   function tipOpenAt(x, y, title, timeText, durText, pin){
     if(!tipEl) return;
-
     tipTitleEl.textContent = title;
     tipTimeEl.textContent = timeText;
     tipDurEl.textContent = durText;
-
     const barRect = tlBarEl.getBoundingClientRect();
-
     let left = x - barRect.left + 10;
     let top = y - barRect.top + 16;
-
     const maxLeft = barRect.width - 20;
     left = Math.max(8, Math.min(left, maxLeft));
     top = Math.max(8, Math.min(top, barRect.height + 10));
-
     tipEl.style.left = left + "px";
     tipEl.style.top = top + "px";
-
     tipEl.classList.add("open");
     if(pin) tipEl.setAttribute("data-pinned","1");
     else tipEl.removeAttribute("data-pinned");
   }
 
   function renderTimeline(dayISO){
-    if(!tlWrapEl || !tlScaleEl || !tlBarEl) return;
-
     const blocks = getBlocksForDay(dayISO);
-
     tlScaleEl.innerHTML = "";
     const scaleHours = [TL_START_HOUR, TL_START_HOUR+3, TL_START_HOUR+6, TL_END_HOUR];
     for(const h of scaleHours){
@@ -862,19 +796,15 @@ async function submitReservation(){
       sp.textContent = `${pad2(h)}:00`;
       tlScaleEl.appendChild(sp);
     }
-
     tlBarEl.querySelectorAll(".tl-block").forEach(n => n.remove());
     tipClose();
-
     const startD = new Date(dayISO + "T00:00:00");
     startD.setHours(TL_START_HOUR,0,0,0);
     const endD = new Date(dayISO + "T00:00:00");
     endD.setHours(TL_END_HOUR,0,0,0);
-
     const rangeStart = startD.getTime();
     const rangeEnd = endD.getTime();
     const range = Math.max(1, rangeEnd - rangeStart);
-
     const inRange = blocks
       .map(b => ({
         status: b.status,
@@ -884,22 +814,17 @@ async function submitReservation(){
         fullEnd: b.endMs
       }))
       .filter(b => b.e > b.s);
-
     tlWrapEl.style.display = "block";
-
     for(const b of inRange){
       const leftPct = ((b.s - rangeStart) / range) * 100;
       const widthPct = ((b.e - b.s) / range) * 100;
-
       const div = document.createElement("div");
       div.className = "tl-block " + (b.status === "confirmed" ? "conf" : "res");
       div.style.left = `${leftPct}%`;
       div.style.width = `${Math.max(0.8, widthPct)}%`;
-
       const label = b.status === "confirmed" ? "Gebucht" : "Reserviert";
       const timeText = `${fmtHM(b.fullStart)}–${fmtHM(b.fullEnd)}`;
       const durText = `Dauer: ${fmtDuration(b.fullEnd - b.fullStart)}`;
-
       div.addEventListener("mousemove", (ev) => {
         if(tipEl?.getAttribute("data-pinned") === "1") return;
         tipOpenAt(ev.clientX, ev.clientY, label, timeText, durText, false);
@@ -908,12 +833,10 @@ async function submitReservation(){
         if(tipEl?.getAttribute("data-pinned") === "1") return;
         tipClose();
       });
-
       div.addEventListener("click", (ev) => {
         ev.stopPropagation();
         tipOpenAt(ev.clientX, ev.clientY, label, timeText, durText, true);
       });
-
       tlBarEl.appendChild(div);
     }
   }
@@ -922,7 +845,6 @@ async function submitReservation(){
     const aStart = new Date(iso + "T00:00:00").getTime();
     const aEnd = new Date(iso + "T23:59:59").getTime();
     let reserved = 0, confirmed = 0;
-
     for(const e of publicEvents){
       if(rangesOverlap(aStart, aEnd, e.startMs, e.endMs)){
         if(e.status === "confirmed") confirmed++;
@@ -934,7 +856,6 @@ async function submitReservation(){
 
   function buildSlotButtons(dayISO, hours){
     calSlotsEl.innerHTML = "";
-
     if(!hours.length){
       const span = document.createElement("span");
       span.className = "muted";
@@ -942,27 +863,20 @@ async function submitReservation(){
       calSlotsEl.appendChild(span);
       return;
     }
-
     for(const h of hours){
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "btn2";
       btn.textContent = fmtTime(h);
-
       btn.addEventListener("click", async () => {
         const useISO = calSelectedISO || dayISO;
-
         calSelectedISO = useISO;
         dateEl.value = useISO;
-
         await refresh();
-
         startEl.value = fmtTime(h);
         updateCtas();
-
         selectedPillEl?.scrollIntoView({behavior:"smooth", block:"center"});
       });
-
       calSlotsEl.appendChild(btn);
     }
   }
@@ -970,14 +884,11 @@ async function submitReservation(){
   async function showDaySlots(dayISO){
     calDayTitleEl.textContent = `Freie Startzeiten am ${dayISO} (für das ausgewählte Paket):`;
     calSlotsEl.innerHTML = "";
-
     try{
       const sunset = await getSunsetLocal(dayISO);
       const duration = Number(pkgEl.value);
-
       const { allowed } = computeAllowedStartHours(dayISO, sunset, duration);
       const filtered = filterByBookings(dayISO, duration, allowed);
-
       buildSlotButtons(dayISO, filtered);
       renderBlocksList(dayISO);
       renderTimeline(dayISO);
@@ -992,33 +903,25 @@ async function submitReservation(){
   }
 
   async function renderCalendar(){
-    if(!calGridEl) return;
-
     const year = calCursor.getFullYear();
     const month = calCursor.getMonth();
-
     await loadHolidaysForYear(year);
     const holidayMap = holidayByYear.get(year) || new Map();
-
     if(calTitleEl){
       calTitleEl.textContent = calCursor.toLocaleDateString("de-DE", { month:"long", year:"numeric" });
     }
-
     const dow = ["Mo","Di","Mi","Do","Fr","Sa","So"];
     const first = new Date(year, month, 1);
     const firstDow = (first.getDay() + 6) % 7;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-
     const today = new Date();
     today.setHours(0,0,0,0);
     const todayMs = today.getTime();
     const todayISO = today.toISOString().slice(0,10);
-
     const grid = document.createElement("div");
     grid.style.display = "grid";
     grid.style.gridTemplateColumns = "repeat(7, minmax(0, 1fr))";
     grid.style.gap = "8px";
-
     for(const d of dow){
       const h = document.createElement("div");
       h.className = "muted";
@@ -1027,20 +930,16 @@ async function submitReservation(){
       h.textContent = d;
       grid.appendChild(h);
     }
-
     for(let i=0; i<firstDow; i++){
       const blank = document.createElement("div");
       blank.style.minHeight = "54px";
       grid.appendChild(blank);
     }
-
     for(let day=1; day<=daysInMonth; day++){
       const d = new Date(year, month, day);
       d.setHours(0,0,0,0);
       const iso = calToISODate(d);
-
       const isPast = d.getTime() < todayMs;
-
       const cell = document.createElement("button");
       cell.type = "button";
       cell.style.display = "block";
@@ -1053,18 +952,15 @@ async function submitReservation(){
       cell.style.background = "#fff";
       cell.style.cursor = isPast ? "not-allowed" : "pointer";
       cell.style.opacity = isPast ? "0.45" : "1";
-
       if(iso === todayISO) cell.style.background = "rgba(29,51,74,.06)";
       if(calSelectedISO && iso === calSelectedISO){
         cell.style.outline = "3px solid rgba(29,51,74,.30)";
         cell.style.outlineOffset = "2px";
       }
-
       const num = document.createElement("div");
       num.style.fontWeight = "800";
       num.textContent = String(day);
       cell.appendChild(num);
-
       const holidayName = holidayMap.get(iso) || "";
       if(holidayName){
         const h = document.createElement("div");
@@ -1073,7 +969,6 @@ async function submitReservation(){
         cell.appendChild(h);
         cell.title = holidayName;
       }
-
       const { reserved, confirmed } = countBlocksOnDay(iso);
       if(reserved || confirmed){
         const badge = document.createElement("div");
@@ -1087,46 +982,41 @@ async function submitReservation(){
         badge.textContent = parts.join(" • ");
         cell.appendChild(badge);
       }
-
       cell.addEventListener("click", async () => {
         if(isPast) return;
-
         calSelectedISO = iso;
         await renderCalendar();
-
         dateEl.value = iso;
         await refresh();
-
         showDaySlots(iso);
       });
-
       grid.appendChild(cell);
     }
-
     calGridEl.innerHTML = "";
     calGridEl.appendChild(grid);
   }
 
+  // Event Listeners
   calPrevEl?.addEventListener("click", async () => {
     calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()-1, 1);
     await renderCalendar();
   });
+
   calNextEl?.addEventListener("click", async () => {
     calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()+1, 1);
     await renderCalendar();
   });
+
   calTodayEl?.addEventListener("click", async () => {
-    const t = new Date();
-    t.setHours(0,0,0,0);
-
-    calCursor = new Date(t.getFullYear(), t.getMonth(), 1);
-    calSelectedISO = t.toISOString().slice(0,10);
-
+    const todayISO = getTodayISO();
+    calCursor = new Date(todayISO + "T00:00:00");
+    calCursor.setDate(1);
+    calCursor.setHours(0,0,0,0);
+    calSelectedISO = todayISO;
     await renderCalendar();
-
-    dateEl.value = calSelectedISO;
+    setTodayDate();
     await refresh();
-    showDaySlots(calSelectedISO);
+    showDaySlots(todayISO);
   });
 
   pkgEl?.addEventListener("change", async () => {
@@ -1135,25 +1025,22 @@ async function submitReservation(){
   });
 
   dateEl.addEventListener("change", async () => {
-  const iso = dateEl.value;
-  if(!iso) return;
-  
-  calSelectedISO = iso;
-  calCursor = new Date(iso + "T00:00:00");
-  calCursor.setDate(1);
-  calCursor.setHours(0,0,0,0);
-  
-  await renderCalendar();
-  await refresh();        // ✅ NACH Slots!
-  showDaySlots(iso);
-});
+    const iso = dateEl.value;
+    if(!iso) return;
+    calSelectedISO = iso;
+    calCursor = new Date(iso + "T00:00:00");
+    calCursor.setDate(1);
+    calCursor.setHours(0,0,0,0);
+    await renderCalendar();
+    await refresh();
+    showDaySlots(iso);
+  });
 
   startEl.addEventListener("change", updateCtas);
-
-  // NEU: CTA Klick-Handler aktivieren
   ctaEl?.addEventListener("click", submitReservation);
+  tipCloseEl?.addEventListener("click", tipClose);
 
-  // --- iFrame Auto-Height (Child -> Parent) ---
+  // iFrame Auto-Height
   function wmPostHeight(){
     const h = Math.max(
       document.documentElement.scrollHeight,
@@ -1161,61 +1048,45 @@ async function submitReservation(){
       document.documentElement.offsetHeight,
       document.body?.offsetHeight || 0
     );
-
     window.parent?.postMessage({ type: "wm-iframe-height", height: h }, "https://warnowmoments.de");
     window.parent?.postMessage({ type: "wm-iframe-height", height: h }, "https://www.warnowmoments.de");
   }
 
-  window.addEventListener("load", () => {
-    wmPostHeight();
-    setTimeout(wmPostHeight, 250);
-    setTimeout(wmPostHeight, 1000);
-  });
-
-  if ("ResizeObserver" in window) {
-    const ro = new ResizeObserver(() => wmPostHeight());
-    ro.observe(document.documentElement);
-  }
-
-  (async () => {
-    await loadPublicCalendar();
-    await loadHolidaysForYear(new Date().getFullYear());
-
-    const t = new Date();
-    t.setHours(0,0,0,0);
-    const todayISO = t.toISOString().slice(0,10);
-
-    calSelectedISO = todayISO;
+  // Initialisierung
+  async function init(){
+    const todayISO = getTodayISO();
+    
+    // 1. Heutiges Datum setzen
+    setTodayDate();
+    
+    // 2. Kalender initialisieren
     calCursor = new Date(todayISO + "T00:00:00");
     calCursor.setDate(1);
     calCursor.setHours(0,0,0,0);
-
+    
+    // 3. Daten laden
+    await Promise.all([
+      loadPublicCalendar(),
+      loadHolidaysForYear(new Date().getFullYear())
+    ]);
+    
+    // 4. UI rendern
     await renderCalendar();
     await refresh();
     showDaySlots(todayISO);
+    updateCtas();
+    
+    // 5. Resize Observer
+    if ("ResizeObserver" in window) {
+      const ro = new ResizeObserver(() => wmPostHeight());
+      ro.observe(document.documentElement);
+    }
+    
+    wmPostHeight();
+  }
 
-// ✅ EINMALIGE Initialisierung nach DOM ready
-document.addEventListener("DOMContentLoaded", async () => {
-  await loadPublicCalendar();
-  await loadHolidaysForYear(new Date().getFullYear());
-
-  const t = new Date();
-  t.setHours(0,0,0,0);
-  const todayISO = t.toISOString().slice(0,10);
-
-  dateEl.value = todayISO;
-  calSelectedISO = todayISO;
-  calCursor = new Date(todayISO + "T00:00:00");
-  calCursor.setDate(1);
-  calCursor.setHours(0,0,0,0);
-
-  await renderCalendar();
-  await refresh();
-  showDaySlots(todayISO);
-  updateCtas();
-
-  wmPostHeight();
-});
+  // Start
+  init();
 
 })();
 </script>
