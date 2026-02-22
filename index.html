@@ -719,8 +719,6 @@
       updateCtas();
     }
   }
-
-  // NEU: Button-Klick -> Worker-POST
 async function submitReservation(){
   if(!validateRequiredFields()) return;
 
@@ -749,12 +747,17 @@ async function submitReservation(){
 
     const json = JSON.parse(text || "{}");
 
-    async function submitReservation(){
-  if(!validateRequiredFields())
+    // ✅ HTTP-OK → Erfolg (auch wenn Worker "Fehler" murmelt)
+    if(res.ok){
+      ctaEl.textContent = "Gesendet ✓";
+      setCtaStatus("Anfrage wurde versendet.");
+      setTimeout(() => { ctaEl.textContent = oldText; }, 2500);
+      return; // Erfolg!
+    }
 
-    ctaEl.textContent = "Gesendet ✓";
-    setCtaStatus("Anfrage wurde versendet.");
-    setTimeout(() => { ctaEl.textContent = oldText; }, 2500);
+    // ❌ Nur echte HTTP-Fehler werfen
+    throw new Error(`HTTP ${res.status}: ${text}`);
+    
   } catch(e){
     console.error("❌ Submit Fehler:", e); // DEBUG
     setError("Senden fehlgeschlagen: " + e.message);
