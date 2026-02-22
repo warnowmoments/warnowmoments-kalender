@@ -1135,16 +1135,18 @@ async function submitReservation(){
   });
 
   dateEl.addEventListener("change", async () => {
-    calSelectedISO = dateEl.value || null;
-    await refresh();
-    if(calSelectedISO) {
-      calCursor = new Date(calSelectedISO + "T00:00:00");
-      calCursor.setDate(1);
-      calCursor.setHours(0,0,0,0);
-      await renderCalendar();
-      showDaySlots(calSelectedISO);
-    }
-  });
+  const iso = dateEl.value;
+  if(!iso) return;
+  
+  calSelectedISO = iso;
+  calCursor = new Date(iso + "T00:00:00");
+  calCursor.setDate(1);
+  calCursor.setHours(0,0,0,0);
+  
+  await renderCalendar();
+  await refresh();        // ✅ NACH Slots!
+  showDaySlots(iso);
+});
 
   startEl.addEventListener("change", updateCtas);
 
