@@ -45,6 +45,8 @@
       margin:0;
       padding:16px;
       max-width:980px;
+      /* Verhindert horizontales Scrollen im iFrame */
+      overflow-x: hidden; 
     }
 
     h1{
@@ -69,9 +71,11 @@
       font-size: var(--fs-label);
     }
 
-    select,input,button,textarea{ font: inherit; }
+    select,input[type="text"],input[type="email"],input[type="tel"],input[type="date"],button,textarea{ 
+      font: inherit; 
+    }
 
-    select,input,textarea{
+    select,input[type="text"],input[type="email"],input[type="tel"],input[type="date"],textarea{
       padding:10px;
       width:100%;
       max-width:100%;
@@ -79,7 +83,19 @@
       border: 1px solid var(--c-border);
       border-radius: 10px;
       background: #fff;
+      transition: border-color 0.2s;
     }
+    
+    /* Fokus und Fehler-Styling */
+    select:focus,input:focus,textarea:focus {
+      outline: 2px solid var(--c-primary);
+      outline-offset: -1px;
+    }
+    .input-error {
+      border-color: var(--c-error) !important;
+      background-color: #fef2f2 !important;
+    }
+
     select:disabled, input:disabled, textarea:disabled{
       background: #f8fafc;
       color: #6b7280;
@@ -115,7 +131,9 @@
       cursor:pointer;
       background:#fff;
       color: var(--c-primary);
+      transition: opacity 0.2s;
     }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn{ background: var(--c-primary); color:#fff; }
 
     .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
@@ -142,7 +160,6 @@
     }
     .kv{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
 
-    /* Feiertags-Label im Kalender */
     .holiday-label{
       margin-top: 2px;
       font-size: 11px;
@@ -156,7 +173,6 @@
       max-width: 100%;
     }
 
-    /* Timeline */
     .tl-wrap{
       border:1px solid var(--c-border);
       border-radius: 12px;
@@ -208,7 +224,6 @@
     .tl-dot.res{ background: var(--c-res); }
     .tl-dot.conf{ background: var(--c-conf); }
 
-    /* Tooltip */
     .tl-tip{
       position:absolute;
       z-index: 50;
@@ -238,6 +253,32 @@
       font-weight: 900;
       cursor:pointer;
       line-height:1;
+    }
+    
+    /* DSGVO Checkbox Styling */
+    .privacy-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-top: 16px;
+      margin-bottom: 12px;
+    }
+    .privacy-row input[type="checkbox"] {
+      margin-top: 3px;
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    .privacy-row label {
+      margin: 0;
+      font-weight: var(--fw-regular);
+      font-size: var(--fs-muted);
+      color: var(--c-muted);
+      cursor: pointer;
+    }
+    .privacy-row a {
+      color: var(--c-primary);
+      text-decoration: underline;
     }
   </style>
 </head>
@@ -279,15 +320,15 @@
   <div class="grid" style="margin-top:10px">
     <div>
       <label for="name">Name</label>
-      <input id="name" type="text" autocomplete="name" required />
+      <input id="name" type="text" autocomplete="name" placeholder="Max Mustermann" required />
     </div>
     <div>
       <label for="email">E‑Mail Adresse</label>
-      <input id="email" type="email" autocomplete="email" required />
+      <input id="email" type="email" autocomplete="email" placeholder="mail@beispiel.de" required />
     </div>
     <div>
       <label for="phone">Telefonnummer</label>
-      <input id="phone" type="tel" autocomplete="tel" required />
+      <input id="phone" type="tel" autocomplete="tel" placeholder="0151 1234567" required />
     </div>
   </div>
 
@@ -296,7 +337,15 @@
     <textarea id="message" placeholder="Optional: z.B. Teilnehmerzahl, besondere Wünsche, Rückfragen …"></textarea>
   </div>
 
-  <div class="row" style="margin-top:12px">
+  <div class="privacy-row">
+    <input type="checkbox" id="privacy" required />
+    <label for="privacy">
+      Ich stimme zu, dass meine Angaben aus dem Formular zur Beantwortung meiner Anfrage erhoben und verarbeitet werden. 
+      Details entnehmen Sie unserer <a href="https://warnowmoments.de/datenschutz" target="_blank" rel="noopener">Datenschutzerklärung</a>.
+    </label>
+  </div>
+
+  <div class="row">
     <button class="btn" id="cta" type="button">Reservierung anfragen</button>
     <a class="btn2" id="cta2" href="https://warnowmoments.de/contact" target="_blank" rel="noopener">
       Kontaktformular öffnen
@@ -368,7 +417,6 @@
   const PUBLIC_CAL_URL = "./wm_public_calendar.json";
   const BLOCK_STATUSES = new Set(["reserved","confirmed"]);
 
-  const CONTACT_URL = "https://warnowmoments.de/contact";
   const WORKERURL = "https://reservierung-v2.kontakt-70d.workers.dev/";
 
   // Elemente
@@ -386,6 +434,7 @@
   const emailEl = document.getElementById("email");
   const phoneEl = document.getElementById("phone");
   const messageEl = document.getElementById("message");
+  const privacyEl = document.getElementById("privacy");
 
   const calPrevEl = document.getElementById("cal-prev");
   const calNextEl = document.getElementById("cal-next");
@@ -448,25 +497,36 @@
     return `${h}h ${m}min`;
   }
   function escapeText(s){
-    return String(s || "").replace(/\s+/g, " ").trim();
+    return String(s || "").replace(/\\s+/g, " ").trim();
   }
 
-  function getTodayISO(){
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    return today.toISOString().slice(0,10);
+  async function getTodayISO(){
+    try {
+      const res = await fetch("https://reservierung-v2.kontakt-70d.workers.dev/today", {
+        cache: "no-store",
+        method: 'GET'
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return data.today;
+    } catch(e) {
+      const now = new Date();
+      return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().slice(0,10);
+    }
   }
 
-  function setTodayDate(){
-    const todayISO = getTodayISO();
-    dateEl.value = todayISO;
-    calSelectedISO = todayISO;
+  async function setTodayDate(){
+    try {
+      const todayISO = await getTodayISO();
+      dateEl.value = todayISO;
+      calSelectedISO = todayISO;
+    } catch(e) {}
   }
 
   async function loadPublicCalendar(){
     try{
       const res = await fetch(PUBLIC_CAL_URL, { cache: "no-store" });
-      if(!res.ok) throw new Error("public calendar fetch failed");
+      if(!res.ok) throw new Error("fetch failed");
       const data = await res.json();
       const ev = Array.isArray(data?.events) ? data.events : [];
       publicEvents = ev
@@ -496,9 +556,8 @@
   async function loadHolidaysForYear(year){
     if(holidayByYear.has(year)) return;
     try{
-      const url = `${HOLIDAY_API_BASE}/${year}/${HOLIDAY_COUNTRY}`;
-      const res = await fetch(url, { cache: "force-cache" });
-      if(!res.ok) throw new Error("holiday fetch failed");
+      const res = await fetch(`${HOLIDAY_API_BASE}/${year}/${HOLIDAY_COUNTRY}`, { cache: "force-cache" });
+      if(!res.ok) throw new Error();
       const data = await res.json();
       const map = new Map();
       if(Array.isArray(data)){
@@ -516,11 +575,10 @@
   }
 
   async function getSunsetLocal(dateISO){
-    const url = `https://api.sunrise-sunset.org/json?lat=${LAT}&lng=${LNG}&date=${dateISO}&formatted=0`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Sunset-API nicht erreichbar");
+    const res = await fetch(`https://api.sunrise-sunset.org/json?lat=${LAT}&lng=${LNG}&date=${dateISO}&formatted=0`);
+    if (!res.ok) throw new Error();
     const data = await res.json();
-    if (!data || data.status !== "OK") throw new Error("Sunset-API Antwort ungültig");
+    if (!data || data.status !== "OK") throw new Error();
     return new Date(data.results.sunset);
   }
 
@@ -569,9 +627,11 @@
       opt.textContent = "Keine Startzeit verfügbar";
       startEl.appendChild(opt);
       startEl.disabled = true;
+      startEl.classList.add("input-error");
       return;
     }
     startEl.disabled = false;
+    startEl.classList.remove("input-error");
     for(const h of hours){
       const v = fmtTime(h);
       const opt = document.createElement("option");
@@ -637,97 +697,123 @@
       const lastStart = new Date(lastStartTsHour);
       const lastStartText = lastStart.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
       if(filtered.length === 0){
-        const calNote = (publicCalendarState === "failed") ? " Hinweis: Kalender konnte nicht geladen werden." : "";
-        hintEl.textContent = `Keine Startzeit verfügbar (bereits belegt).${calNote}`;
+        hintEl.textContent = `Keine Startzeit verfügbar (bereits belegt oder zu spät).`;
       } else {
         hintEl.textContent = `Letzter möglicher Start (volle Stunde) für dieses Paket: ${lastStartText} Uhr (inkl. 30 Min Rückgabe-Puffer).`;
       }
       updateCtas();
     } catch(e){
-      setError("Konnte Sonnenuntergang nicht berechnen. Bitte später erneut versuchen oder direkt kontaktieren.");
       setStartOptions([], "");
       updateCtas();
     }
   }
 
+  // --- NEU: Erweiterte Validierung für besseres User-Feedback ---
+  function validateRequiredFields(){
+    let isValid = true;
+    let firstErrorEl = null;
+
+    // Reset aller Markierungen
+    [nameEl, emailEl, phoneEl, dateEl, pkgEl, startEl].forEach(el => {
+      if(el) el.classList.remove("input-error");
+    });
+    privacyEl.style.outline = "none";
+
+    const checkField = (el, condition, msg) => {
+      if(!el) return;
+      if(!condition){
+        el.classList.add("input-error");
+        if(!firstErrorEl) {
+          firstErrorEl = el;
+          setError(msg);
+        }
+        isValid = false;
+      }
+    };
+
+    checkField(nameEl, nameEl.value.trim() !== "", "Bitte Name eingeben.");
+    checkField(emailEl, emailEl.value.includes("@") && emailEl.value.includes("."), "Bitte gültige E-Mail eingeben.");
+    checkField(phoneEl, phoneEl.value.trim() !== "", "Bitte Telefonnummer eingeben.");
+    checkField(dateEl, dateEl.value !== "", "Bitte Datum auswählen.");
+    
+    if(startEl && startEl.disabled) {
+      startEl.classList.add("input-error");
+      if(!firstErrorEl) {
+         firstErrorEl = startEl;
+         setError("Bitte Datum/Paket so wählen, dass eine Startzeit verfügbar ist.");
+      }
+      isValid = false;
+    }
+
+    if(!privacyEl.checked) {
+      privacyEl.style.outline = "2px solid var(--c-error)";
+      privacyEl.style.outlineOffset = "2px";
+      if(!firstErrorEl) {
+        firstErrorEl = privacyEl;
+        setError("Bitte stimmen Sie der Datenschutzerklärung zu.");
+      }
+      isValid = false;
+    }
+
+    if(!isValid && firstErrorEl) {
+      firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstErrorEl.focus();
+    } else {
+      setError("");
+    }
+
+    return isValid;
+  }
+
+  // Fehler-Highlighting beim Tippen entfernen
+  [nameEl, emailEl, phoneEl, dateEl].forEach(el => {
+    el?.addEventListener("input", () => {
+      el.classList.remove("input-error");
+      if(errEl.style.display === "block") setError("");
+    });
+  });
+  privacyEl?.addEventListener("change", () => {
+    privacyEl.style.outline = "none";
+    if(errEl.style.display === "block") setError("");
+  });
+
   async function submitReservation(){
     if(!validateRequiredFields()) return;
     updateCtas();
-    if(!lastPayload){
-      setError("Bitte Auswahl vollständig machen (Datum/Paket/Startzeit).");
-      return;
-    }
+    
     const oldText = ctaEl.textContent;
     ctaEl.disabled = true;
-    ctaEl.textContent = "Sende…";
+    ctaEl.textContent = "Wird gesendet…";
     setCtaStatus("");
+    
     try{
-      console.log("🧪 Sende Payload:", lastPayload);
       const res = await fetch(WORKERURL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(lastPayload)
       });
-      const text = await res.text();
-      console.log("📡 Worker raw:", text);
-      const json = JSON.parse(text || "{}");
       if(res.ok){
-        ctaEl.textContent = "Gesendet ✓";
-        setCtaStatus("Anfrage wurde versendet.");
-        setTimeout(() => { ctaEl.textContent = oldText; }, 2500);
+        ctaEl.textContent = "Erfolgreich gesendet ✓";
+        setCtaStatus("Vielen Dank! Ihre Anfrage wurde versendet.");
+        // Formular leeren nach Erfolg
+        nameEl.value = ""; emailEl.value = ""; phoneEl.value = ""; messageEl.value = ""; privacyEl.checked = false;
+        setTimeout(() => { ctaEl.textContent = oldText; }, 4000);
         return;
       }
-      throw new Error(`HTTP ${res.status}: ${text}`);
+      throw new Error(`Serverfehler`);
     } catch(e){
-      console.error("❌ Submit Fehler:", e);
-      setError("Senden fehlgeschlagen: " + e.message);
-      setCtaStatus("");
+      setError("Senden fehlgeschlagen. Bitte überprüfen Sie Ihre Internetverbindung oder nutzen Sie das Kontaktformular.");
       ctaEl.textContent = oldText;
     } finally {
       ctaEl.disabled = false;
     }
   }
 
-  function validateRequiredFields(){
-    const required = [
-      { el: nameEl, msg: "Bitte Name eingeben." },
-      { el: emailEl, msg: "Bitte E‑Mail Adresse eingeben." },
-      { el: phoneEl, msg: "Bitte Telefonnummer eingeben." },
-      { el: dateEl, msg: "Bitte Datum auswählen." },
-      { el: pkgEl, msg: "Bitte Paket auswählen." },
-      { el: startEl, msg: "Bitte Startzeit auswählen." },
-    ];
-    for(const r of required){
-      if(!r.el) continue;
-      if(r.el === startEl && startEl.disabled){
-        setError("Bitte Datum/Paket so wählen, dass eine Startzeit verfügbar ist (oder Kontaktformular öffnen).");
-        startEl.focus?.();
-        return false;
-      }
-      const val = (r.el.value || "").trim();
-      if(!val){
-        setError(r.msg);
-        r.el.focus?.();
-        return false;
-      }
-      if(typeof r.el.checkValidity === "function" && !r.el.checkValidity()){
-        setError(r.msg);
-        r.el.reportValidity?.();
-        r.el.focus?.();
-        return false;
-      }
-    }
-    setError("");
-    return true;
-  }
-
-  // Kalender-Funktionen
+  // Kalender-Funktionen (Unverändert, da wartungsfrei)
   function isAllDayLike(startMs, endMs){
     const s = new Date(startMs);
     const e = new Date(endMs);
-    const isStartMidnight = s.getHours() === 0 && s.getMinutes() === 0;
-    const isEndLate = (e.getHours() === 23 && (e.getMinutes() === 59 || e.getMinutes() === 0));
-    return isStartMidnight && isEndLate;
+    return s.getHours() === 0 && s.getMinutes() === 0 && (e.getHours() === 23 && (e.getMinutes() === 59 || e.getMinutes() === 0));
   }
 
   function getBlocksForDay(dayISO){
@@ -735,21 +821,14 @@
     const dayEnd = new Date(dayISO + "T23:59:59").getTime();
     return publicEvents
       .filter(e => rangesOverlap(dayStart, dayEnd, e.startMs, e.endMs))
-      .map(e => {
-        const s = Math.max(e.startMs, dayStart);
-        const en = Math.min(e.endMs, dayEnd);
-        return { status: e.status, startMs: s, endMs: en };
-      })
+      .map(e => ({ status: e.status, startMs: Math.max(e.startMs, dayStart), endMs: Math.min(e.endMs, dayEnd) }))
       .sort((a,b) => a.startMs - b.startMs);
   }
 
   function renderBlocksList(dayISO){
     const blocks = getBlocksForDay(dayISO);
     calBlocksEl.innerHTML = "";
-    if(!blocks.length){
-      calBlocksTitleEl.textContent = "";
-      return;
-    }
+    if(!blocks.length){ calBlocksTitleEl.textContent = ""; return; }
     calBlocksTitleEl.textContent = "Belegungen an diesem Tag:";
     for(const b of blocks){
       const row = document.createElement("div");
@@ -771,84 +850,49 @@
 
   function tipOpenAt(x, y, title, timeText, durText, pin){
     if(!tipEl) return;
-    tipTitleEl.textContent = title;
-    tipTimeEl.textContent = timeText;
-    tipDurEl.textContent = durText;
+    tipTitleEl.textContent = title; tipTimeEl.textContent = timeText; tipDurEl.textContent = durText;
     const barRect = tlBarEl.getBoundingClientRect();
-    let left = x - barRect.left + 10;
-    let top = y - barRect.top + 16;
-    const maxLeft = barRect.width - 20;
-    left = Math.max(8, Math.min(left, maxLeft));
-    top = Math.max(8, Math.min(top, barRect.height + 10));
-    tipEl.style.left = left + "px";
-    tipEl.style.top = top + "px";
-    tipEl.classList.add("open");
-    if(pin) tipEl.setAttribute("data-pinned","1");
-    else tipEl.removeAttribute("data-pinned");
+    let left = Math.max(8, Math.min(x - barRect.left + 10, barRect.width - 20));
+    let top = Math.max(8, Math.min(y - barRect.top + 16, barRect.height + 10));
+    tipEl.style.left = left + "px"; tipEl.style.top = top + "px"; tipEl.classList.add("open");
+    if(pin) tipEl.setAttribute("data-pinned","1"); else tipEl.removeAttribute("data-pinned");
   }
 
   function renderTimeline(dayISO){
     const blocks = getBlocksForDay(dayISO);
     tlScaleEl.innerHTML = "";
-    const scaleHours = [TL_START_HOUR, TL_START_HOUR+3, TL_START_HOUR+6, TL_END_HOUR];
-    for(const h of scaleHours){
-      const sp = document.createElement("span");
-      sp.textContent = `${pad2(h)}:00`;
-      tlScaleEl.appendChild(sp);
-    }
+    [TL_START_HOUR, TL_START_HOUR+3, TL_START_HOUR+6, TL_END_HOUR].forEach(h => {
+      const sp = document.createElement("span"); sp.textContent = `${pad2(h)}:00`; tlScaleEl.appendChild(sp);
+    });
     tlBarEl.querySelectorAll(".tl-block").forEach(n => n.remove());
     tipClose();
-    const startD = new Date(dayISO + "T00:00:00");
-    startD.setHours(TL_START_HOUR,0,0,0);
-    const endD = new Date(dayISO + "T00:00:00");
-    endD.setHours(TL_END_HOUR,0,0,0);
-    const rangeStart = startD.getTime();
-    const rangeEnd = endD.getTime();
+    const rangeStart = new Date(dayISO + "T00:00:00").setHours(TL_START_HOUR,0,0,0);
+    const rangeEnd = new Date(dayISO + "T00:00:00").setHours(TL_END_HOUR,0,0,0);
     const range = Math.max(1, rangeEnd - rangeStart);
-    const inRange = blocks
-      .map(b => ({
-        status: b.status,
-        s: Math.max(b.startMs, rangeStart),
-        e: Math.min(b.endMs, rangeEnd),
-        fullStart: b.startMs,
-        fullEnd: b.endMs
-      }))
-      .filter(b => b.e > b.s);
     tlWrapEl.style.display = "block";
-    for(const b of inRange){
-      const leftPct = ((b.s - rangeStart) / range) * 100;
-      const widthPct = ((b.e - b.s) / range) * 100;
+    blocks.forEach(b => {
+      const s = Math.max(b.startMs, rangeStart); const e = Math.min(b.endMs, rangeEnd);
+      if(e <= s) return;
       const div = document.createElement("div");
       div.className = "tl-block " + (b.status === "confirmed" ? "conf" : "res");
-      div.style.left = `${leftPct}%`;
-      div.style.width = `${Math.max(0.8, widthPct)}%`;
+      div.style.left = `${((s - rangeStart) / range) * 100}%`;
+      div.style.width = `${Math.max(0.8, ((e - s) / range) * 100)}%`;
       const label = b.status === "confirmed" ? "Gebucht" : "Reserviert";
-      const timeText = `${fmtHM(b.fullStart)}–${fmtHM(b.fullEnd)}`;
-      const durText = `Dauer: ${fmtDuration(b.fullEnd - b.fullStart)}`;
-      div.addEventListener("mousemove", (ev) => {
-        if(tipEl?.getAttribute("data-pinned") === "1") return;
-        tipOpenAt(ev.clientX, ev.clientY, label, timeText, durText, false);
-      });
-      div.addEventListener("mouseleave", () => {
-        if(tipEl?.getAttribute("data-pinned") === "1") return;
-        tipClose();
-      });
-      div.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        tipOpenAt(ev.clientX, ev.clientY, label, timeText, durText, true);
-      });
+      const timeText = `${fmtHM(b.startMs)}–${fmtHM(b.endMs)}`;
+      const durText = `Dauer: ${fmtDuration(b.endMs - b.startMs)}`;
+      div.addEventListener("mousemove", (ev) => { if(tipEl?.getAttribute("data-pinned") !== "1") tipOpenAt(ev.clientX, ev.clientY, label, timeText, durText, false); });
+      div.addEventListener("mouseleave", () => { if(tipEl?.getAttribute("data-pinned") !== "1") tipClose(); });
+      div.addEventListener("click", (ev) => { ev.stopPropagation(); tipOpenAt(ev.clientX, ev.clientY, label, timeText, durText, true); });
       tlBarEl.appendChild(div);
-    }
+    });
   }
 
   function countBlocksOnDay(iso){
-    const aStart = new Date(iso + "T00:00:00").getTime();
-    const aEnd = new Date(iso + "T23:59:59").getTime();
+    const aStart = new Date(iso + "T00:00:00").getTime(), aEnd = new Date(iso + "T23:59:59").getTime();
     let reserved = 0, confirmed = 0;
     for(const e of publicEvents){
       if(rangesOverlap(aStart, aEnd, e.startMs, e.endMs)){
-        if(e.status === "confirmed") confirmed++;
-        else if(e.status === "reserved") reserved++;
+        if(e.status === "confirmed") confirmed++; else if(e.status === "reserved") reserved++;
       }
     }
     return { reserved, confirmed };
@@ -857,28 +901,18 @@
   function buildSlotButtons(dayISO, hours){
     calSlotsEl.innerHTML = "";
     if(!hours.length){
-      const span = document.createElement("span");
-      span.className = "muted";
-      span.textContent = "Keine freien Startzeiten an diesem Tag.";
-      calSlotsEl.appendChild(span);
+      const span = document.createElement("span"); span.className = "muted"; span.textContent = "Keine freien Startzeiten an diesem Tag."; calSlotsEl.appendChild(span);
       return;
     }
-    for(const h of hours){
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "btn2";
-      btn.textContent = fmtTime(h);
+    hours.forEach(h => {
+      const btn = document.createElement("button"); btn.type = "button"; btn.className = "btn2"; btn.textContent = fmtTime(h);
       btn.addEventListener("click", async () => {
-        const useISO = calSelectedISO || dayISO;
-        calSelectedISO = useISO;
-        dateEl.value = useISO;
-        await refresh();
-        startEl.value = fmtTime(h);
-        updateCtas();
+        calSelectedISO = dayISO; dateEl.value = dayISO; await refresh();
+        startEl.value = fmtTime(h); updateCtas();
         selectedPillEl?.scrollIntoView({behavior:"smooth", block:"center"});
       });
       calSlotsEl.appendChild(btn);
-    }
+    });
   }
 
   async function showDaySlots(dayISO){
@@ -888,159 +922,75 @@
       const sunset = await getSunsetLocal(dayISO);
       const duration = Number(pkgEl.value);
       const { allowed } = computeAllowedStartHours(dayISO, sunset, duration);
-      const filtered = filterByBookings(dayISO, duration, allowed);
-      buildSlotButtons(dayISO, filtered);
-      renderBlocksList(dayISO);
-      renderTimeline(dayISO);
+      buildSlotButtons(dayISO, filterByBookings(dayISO, duration, allowed));
     } catch(e){
-      const span = document.createElement("span");
-      span.className = "muted";
-      span.textContent = "Slots konnten nicht berechnet werden (Sonnenuntergang nicht verfügbar).";
-      calSlotsEl.appendChild(span);
-      renderBlocksList(dayISO);
-      renderTimeline(dayISO);
+      const span = document.createElement("span"); span.className = "muted"; span.textContent = "Konnte nicht berechnet werden."; calSlotsEl.appendChild(span);
     }
+    renderBlocksList(dayISO); renderTimeline(dayISO);
   }
 
   async function renderCalendar(){
-    const year = calCursor.getFullYear();
-    const month = calCursor.getMonth();
+    const year = calCursor.getFullYear(), month = calCursor.getMonth();
     await loadHolidaysForYear(year);
     const holidayMap = holidayByYear.get(year) || new Map();
-    if(calTitleEl){
-      calTitleEl.textContent = calCursor.toLocaleDateString("de-DE", { month:"long", year:"numeric" });
-    }
-    const dow = ["Mo","Di","Mi","Do","Fr","Sa","So"];
-    const first = new Date(year, month, 1);
-    const firstDow = (first.getDay() + 6) % 7;
+    if(calTitleEl) calTitleEl.textContent = calCursor.toLocaleDateString("de-DE", { month:"long", year:"numeric" });
+    const firstDow = (new Date(year, month, 1).getDay() + 6) % 7;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const todayMs = today.getTime();
-    const todayISO = today.toISOString().slice(0,10);
+    const todayMs = new Date(new Date().setHours(0,0,0,0)).getTime();
+    const todayISO = new Date().toISOString().slice(0,10);
+    
     const grid = document.createElement("div");
-    grid.style.display = "grid";
-    grid.style.gridTemplateColumns = "repeat(7, minmax(0, 1fr))";
-    grid.style.gap = "8px";
-    for(const d of dow){
-      const h = document.createElement("div");
-      h.className = "muted";
-      h.style.textAlign = "center";
-      h.style.fontWeight = "800";
-      h.textContent = d;
-      grid.appendChild(h);
-    }
-    for(let i=0; i<firstDow; i++){
-      const blank = document.createElement("div");
-      blank.style.minHeight = "54px";
-      grid.appendChild(blank);
-    }
+    grid.style.display = "grid"; grid.style.gridTemplateColumns = "repeat(7, minmax(0, 1fr))"; grid.style.gap = "8px";
+    ["Mo","Di","Mi","Do","Fr","Sa","So"].forEach(d => {
+      const h = document.createElement("div"); h.className = "muted"; h.style.textAlign = "center"; h.style.fontWeight = "800"; h.textContent = d; grid.appendChild(h);
+    });
+    for(let i=0; i<firstDow; i++){ const b = document.createElement("div"); b.style.minHeight = "54px"; grid.appendChild(b); }
     for(let day=1; day<=daysInMonth; day++){
-      const d = new Date(year, month, day);
-      d.setHours(0,0,0,0);
-      const iso = calToISODate(d);
-      const isPast = d.getTime() < todayMs;
-      const cell = document.createElement("button");
-      cell.type = "button";
-      cell.style.display = "block";
-      cell.style.width = "100%";
-      cell.style.textAlign = "left";
-      cell.style.border = "1px solid var(--c-border)";
-      cell.style.borderRadius = "12px";
-      cell.style.padding = "8px";
-      cell.style.minHeight = "54px";
-      cell.style.background = "#fff";
-      cell.style.cursor = isPast ? "not-allowed" : "pointer";
-      cell.style.opacity = isPast ? "0.45" : "1";
+      const d = new Date(year, month, day); d.setHours(0,0,0,0);
+      const iso = calToISODate(d), isPast = d.getTime() < todayMs;
+      const cell = document.createElement("button"); cell.type = "button";
+      cell.style.cssText = `display:block; width:100%; text-align:left; border:1px solid var(--c-border); border-radius:12px; padding:8px; min-height:54px; background:#fff; cursor:${isPast?'not-allowed':'pointer'}; opacity:${isPast?'0.45':'1'};`;
       if(iso === todayISO) cell.style.background = "rgba(29,51,74,.06)";
-      if(calSelectedISO && iso === calSelectedISO){
-        cell.style.outline = "3px solid rgba(29,51,74,.30)";
-        cell.style.outlineOffset = "2px";
-      }
-      const num = document.createElement("div");
-      num.style.fontWeight = "800";
-      num.textContent = String(day);
-      cell.appendChild(num);
-      const holidayName = holidayMap.get(iso) || "";
-      if(holidayName){
-        const h = document.createElement("div");
-        h.className = "holiday-label";
-        h.textContent = holidayName;
-        cell.appendChild(h);
-        cell.title = holidayName;
-      }
+      if(calSelectedISO === iso) { cell.style.outline = "3px solid rgba(29,51,74,.30)"; cell.style.outlineOffset = "2px"; }
+      
+      const num = document.createElement("div"); num.style.fontWeight = "800"; num.textContent = day; cell.appendChild(num);
+      const hol = holidayMap.get(iso);
+      if(hol){ const hEl = document.createElement("div"); hEl.className = "holiday-label"; hEl.textContent = hol; cell.appendChild(hEl); cell.title = hol; }
+      
       const { reserved, confirmed } = countBlocksOnDay(iso);
       if(reserved || confirmed){
-        const badge = document.createElement("div");
-        badge.className = "muted";
-        badge.style.marginTop = "4px";
-        badge.style.fontSize = "12px";
-        badge.style.fontWeight = "800";
-        const parts = [];
-        if(confirmed) parts.push(`Gebucht: ${confirmed}`);
-        if(reserved) parts.push(`Reserv.: ${reserved}`);
-        badge.textContent = parts.join(" • ");
-        cell.appendChild(badge);
+        const badge = document.createElement("div"); badge.className = "muted"; badge.style.cssText = "margin-top:4px; font-size:12px; font-weight:800;";
+        const parts = []; if(confirmed) parts.push(`Gebucht: ${confirmed}`); if(reserved) parts.push(`Reserv.: ${reserved}`);
+        badge.textContent = parts.join(" • "); cell.appendChild(badge);
       }
       cell.addEventListener("click", async () => {
         if(isPast) return;
-        calSelectedISO = iso;
-        await renderCalendar();
-        dateEl.value = iso;
-        await refresh();
-        showDaySlots(iso);
+        calSelectedISO = iso; await renderCalendar(); dateEl.value = iso; await refresh(); showDaySlots(iso);
       });
       grid.appendChild(cell);
     }
-    calGridEl.innerHTML = "";
-    calGridEl.appendChild(grid);
+    calGridEl.innerHTML = ""; calGridEl.appendChild(grid);
   }
 
   // Event Listeners
-  calPrevEl?.addEventListener("click", async () => {
-    calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()-1, 1);
-    await renderCalendar();
-  });
-
-  calNextEl?.addEventListener("click", async () => {
-    calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()+1, 1);
-    await renderCalendar();
-  });
-
+  calPrevEl?.addEventListener("click", async () => { calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()-1, 1); await renderCalendar(); });
+  calNextEl?.addEventListener("click", async () => { calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()+1, 1); await renderCalendar(); });
   calTodayEl?.addEventListener("click", async () => {
-    const todayISO = getTodayISO();
-    calCursor = new Date(todayISO + "T00:00:00");
-    calCursor.setDate(1);
-    calCursor.setHours(0,0,0,0);
-    calSelectedISO = todayISO;
-    await renderCalendar();
-    setTodayDate();
-    await refresh();
-    showDaySlots(todayISO);
+    const todayISO = await getTodayISO(); calCursor = new Date(todayISO + "T00:00:00"); calCursor.setDate(1); calCursor.setHours(0,0,0,0);
+    calSelectedISO = todayISO; await renderCalendar(); dateEl.value = todayISO; await refresh(); showDaySlots(todayISO);
   });
-
-  pkgEl?.addEventListener("change", async () => {
-    await refresh();
-    if(calSelectedISO) showDaySlots(calSelectedISO);
-  });
-
+  pkgEl?.addEventListener("change", async () => { await refresh(); if(calSelectedISO) showDaySlots(calSelectedISO); });
   dateEl.addEventListener("change", async () => {
-    const iso = dateEl.value;
-    if(!iso) return;
-    calSelectedISO = iso;
-    calCursor = new Date(iso + "T00:00:00");
-    calCursor.setDate(1);
-    calCursor.setHours(0,0,0,0);
-    await renderCalendar();
-    await refresh();
-    showDaySlots(iso);
+    const iso = dateEl.value; if(!iso) return; calSelectedISO = iso;
+    calCursor = new Date(iso + "T00:00:00"); calCursor.setDate(1); calCursor.setHours(0,0,0,0);
+    await renderCalendar(); await refresh(); showDaySlots(iso);
   });
-
   startEl.addEventListener("change", updateCtas);
   ctaEl?.addEventListener("click", submitReservation);
   tipCloseEl?.addEventListener("click", tipClose);
 
-  // iFrame Auto-Height
+  // --- NEU: Debounced iFrame Auto-Height (verhindert Ruckeln in Squarespace) ---
+  let resizeTimeout;
   function wmPostHeight(){
     const h = Math.max(
       document.documentElement.scrollHeight,
@@ -1052,42 +1002,30 @@
     window.parent?.postMessage({ type: "wm-iframe-height", height: h }, "https://www.warnowmoments.de");
   }
 
-  // Initialisierung
   async function init(){
-    const todayISO = getTodayISO();
-    
-    // 1. Heutiges Datum setzen
-    setTodayDate();
-    
-    // 2. Kalender initialisieren
-    calCursor = new Date(todayISO + "T00:00:00");
-    calCursor.setDate(1);
-    calCursor.setHours(0,0,0,0);
-    
-    // 3. Daten laden
-    await Promise.all([
-      loadPublicCalendar(),
-      loadHolidaysForYear(new Date().getFullYear())
-    ]);
-    
-    // 4. UI rendern
-    await renderCalendar();
-    await refresh();
-    showDaySlots(todayISO);
-    updateCtas();
-    
-    // 5. Resize Observer
-    if ("ResizeObserver" in window) {
-      const ro = new ResizeObserver(() => wmPostHeight());
-      ro.observe(document.documentElement);
+    try {
+      await setTodayDate();
+      const todayISO = dateEl.value || new Date().toISOString().slice(0,10);
+      calCursor = new Date(todayISO + "T00:00:00"); calCursor.setDate(1); calCursor.setHours(0,0,0,0);
+      
+      await Promise.all([ loadPublicCalendar(), loadHolidaysForYear(new Date().getFullYear()) ]);
+      await renderCalendar(); await refresh(); if(calSelectedISO) showDaySlots(calSelectedISO); updateCtas();
+      
+      if ("ResizeObserver" in window) {
+        // Verzögerung von 50ms (Debounce) eingefügt
+        const ro = new ResizeObserver(() => {
+          clearTimeout(resizeTimeout);
+          resizeTimeout = setTimeout(wmPostHeight, 50);
+        });
+        ro.observe(document.documentElement);
+      }
+      wmPostHeight();
+    } catch(e) {
+      setError("Initialisierung fehlgeschlagen. Bitte Seite neu laden.");
     }
-    
-    wmPostHeight();
   }
 
-  // Start
   init();
-
 })();
 </script>
 
