@@ -255,28 +255,28 @@
       line-height:1;
     }
     
-    /* DSGVO Checkbox Styling */
-    .privacy-row {
+    /* Checkbox Styling */
+    .checkbox-row {
       display: flex;
       gap: 10px;
       align-items: flex-start;
       margin-top: 16px;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
-    .privacy-row input[type="checkbox"] {
+    .checkbox-row input[type="checkbox"] {
       margin-top: 3px;
       width: 18px;
       height: 18px;
       cursor: pointer;
     }
-    .privacy-row label {
+    .checkbox-row label {
       margin: 0;
       font-weight: var(--fw-regular);
       font-size: var(--fs-muted);
-      color: var(--c-muted);
+      color: var(--c-text);
       cursor: pointer;
     }
-    .privacy-row a {
+    .checkbox-row a {
       color: var(--c-primary);
       text-decoration: underline;
     }
@@ -337,7 +337,14 @@
     <textarea id="message" placeholder="Optional: z.B. Teilnehmerzahl, besondere Wünsche, Rückfragen …"></textarea>
   </div>
 
-  <div class="privacy-row">
+  <div class="checkbox-row" style="margin-top: 12px;">
+    <input type="checkbox" id="copyCustomer" />
+    <label for="copyCustomer">
+      Bitte senden Sie mir eine Kopie dieser Anfrage an meine E-Mail-Adresse.
+    </label>
+  </div>
+
+  <div class="checkbox-row" style="margin-top: 8px; margin-bottom: 12px;">
     <input type="checkbox" id="privacy" required />
     <label for="privacy">
       Ich stimme zu, dass meine Angaben aus dem Formular zur Beantwortung meiner Anfrage erhoben und verarbeitet werden. 
@@ -435,6 +442,7 @@
   const phoneEl = document.getElementById("phone");
   const messageEl = document.getElementById("message");
   const privacyEl = document.getElementById("privacy");
+  const copyCustomerEl = document.getElementById("copyCustomer");
 
   const calPrevEl = document.getElementById("cal-prev");
   const calNextEl = document.getElementById("cal-next");
@@ -479,12 +487,15 @@
   function rangesOverlap(aStart,aEnd,bStart,bEnd){
     return aStart < bEnd && bStart < aEnd;
   }
+  
+  // Diese Funktion sorgt dafür, dass das Datum fehlerfrei im korrekten lokalen Format umgewandelt wird
   function calToISODate(d){
     const y = d.getFullYear();
     const m = String(d.getMonth()+1).padStart(2,"0");
     const dd = String(d.getDate()).padStart(2,"0");
     return `${y}-${m}-${dd}`;
   }
+  
   function fmtHM(ms){
     const d = new Date(ms);
     return d.toLocaleTimeString("de-DE", { hour:"2-digit", minute:"2-digit" });
@@ -500,19 +511,9 @@
     return String(s || "").replace(/\\s+/g, " ").trim();
   }
 
+  // Korrigiertes getTodayISO() für die sichere lokale Datums-Ermittlung
   async function getTodayISO(){
-    try {
-      const res = await fetch("https://reservierung-v2.kontakt-70d.workers.dev/today", {
-        cache: "no-store",
-        method: 'GET'
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      return data.today;
-    } catch(e) {
-      const now = new Date();
-      return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().slice(0,10);
-    }
+    return calToISODate(new Date());
   }
 
   async function setTodayDate(){
@@ -656,6 +657,10 @@
     const emailVal = escapeText(emailEl?.value);
     const phoneVal = escapeText(phoneEl?.value);
     const msgVal = escapeText(messageEl?.value);
+    
+    // Checkbox-Status für Kopie auslesen
+    const wantsCopy = copyCustomerEl?.checked ? "Ja" : "Nein";
+
     lastPayload = {
       SQF_name: nameVal,
       SQF_email: emailVal,
@@ -664,6 +669,7 @@
       SQF_date: dateISO,
       SQF_start: startVal,
       SQF_paket: pkgLabel,
+      SQF_copyToCustomer: wantsCopy, // Neues Feld für den Server
       date: dateISO,
       start: startVal,
       paket: pkgLabel,
@@ -708,12 +714,10 @@
     }
   }
 
-  // --- NEU: Erweiterte Validierung für besseres User-Feedback ---
   function validateRequiredFields(){
     let isValid = true;
     let firstErrorEl = null;
 
-    // Reset aller Markierungen
     [nameEl, emailEl, phoneEl, dateEl, pkgEl, startEl].forEach(el => {
       if(el) el.classList.remove("input-error");
     });
@@ -765,17 +769,19 @@
     return isValid;
   }
 
-  // Fehler-Highlighting beim Tippen entfernen
   [nameEl, emailEl, phoneEl, dateEl].forEach(el => {
     el?.addEventListener("input", () => {
       el.classList.remove("input-error");
       if(errEl.style.display === "block") setError("");
     });
   });
+  
   privacyEl?.addEventListener("change", () => {
     privacyEl.style.outline = "none";
     if(errEl.style.display === "block") setError("");
   });
+  
+  copyCustomerEl?.addEventListener("change", updateCtas);
 
   async function submitReservation(){
     if(!validateRequiredFields()) return;
@@ -795,8 +801,7 @@
       if(res.ok){
         ctaEl.textContent = "Erfolgreich gesendet ✓";
         setCtaStatus("Vielen Dank! Ihre Anfrage wurde versendet.");
-        // Formular leeren nach Erfolg
-        nameEl.value = ""; emailEl.value = ""; phoneEl.value = ""; messageEl.value = ""; privacyEl.checked = false;
+        nameEl.value = ""; emailEl.value = ""; phoneEl.value = ""; messageEl.value = ""; privacyEl.checked = false; copyCustomerEl.checked = false;
         setTimeout(() => { ctaEl.textContent = oldText; }, 4000);
         return;
       }
@@ -809,7 +814,6 @@
     }
   }
 
-  // Kalender-Funktionen (Unverändert, da wartungsfrei)
   function isAllDayLike(startMs, endMs){
     const s = new Date(startMs);
     const e = new Date(endMs);
@@ -937,7 +941,7 @@
     const firstDow = (new Date(year, month, 1).getDay() + 6) % 7;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const todayMs = new Date(new Date().setHours(0,0,0,0)).getTime();
-    const todayISO = new Date().toISOString().slice(0,10);
+    const todayISO = await getTodayISO(); // Nutzt die sichere lokale Version
     
     const grid = document.createElement("div");
     grid.style.display = "grid"; grid.style.gridTemplateColumns = "repeat(7, minmax(0, 1fr))"; grid.style.gap = "8px";
@@ -989,7 +993,6 @@
   ctaEl?.addEventListener("click", submitReservation);
   tipCloseEl?.addEventListener("click", tipClose);
 
-  // --- NEU: Debounced iFrame Auto-Height (verhindert Ruckeln in Squarespace) ---
   let resizeTimeout;
   function wmPostHeight(){
     const h = Math.max(
@@ -1005,14 +1008,13 @@
   async function init(){
     try {
       await setTodayDate();
-      const todayISO = dateEl.value || new Date().toISOString().slice(0,10);
+      const todayISO = dateEl.value || await getTodayISO();
       calCursor = new Date(todayISO + "T00:00:00"); calCursor.setDate(1); calCursor.setHours(0,0,0,0);
       
       await Promise.all([ loadPublicCalendar(), loadHolidaysForYear(new Date().getFullYear()) ]);
       await renderCalendar(); await refresh(); if(calSelectedISO) showDaySlots(calSelectedISO); updateCtas();
       
       if ("ResizeObserver" in window) {
-        // Verzögerung von 50ms (Debounce) eingefügt
         const ro = new ResizeObserver(() => {
           clearTimeout(resizeTimeout);
           resizeTimeout = setTimeout(wmPostHeight, 50);
