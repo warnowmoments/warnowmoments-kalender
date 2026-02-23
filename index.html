@@ -538,6 +538,9 @@
 
 <script>
 (() => {
+  // HIER KANNST DU DEN SAISONSTART ANPASSEN
+  const SEASON_START = "2026-04-01";
+
   const LAT = 54.0924;
   const LNG = 12.0991;
   const HOURS_MIN = 9;
@@ -615,13 +618,22 @@
   }
   function escapeText(s){ return String(s || "").replace(/\s+/g, " ").trim(); }
 
-  async function getTodayISO(){ return calToISODate(new Date()); }
+  // HIER HABEN WIR DIE FUNKTION ANGEPASST: 
+  // Das Tool startet nun automatisch am ersten verfügbaren Tag der Saison, 
+  // falls heute ein Datum VOR dem Saisonstart ist.
+  async function getTodayISO(){ 
+    const today = calToISODate(new Date());
+    if (today < SEASON_START) {
+      return SEASON_START;
+    }
+    return today; 
+  }
 
   async function setTodayDate(){
     try {
-      const todayISO = await getTodayISO();
-      dateEl.value = todayISO;
-      calSelectedISO = todayISO;
+      const startISO = await getTodayISO();
+      dateEl.value = startISO;
+      calSelectedISO = startISO;
     } catch(e) {}
   }
 
@@ -664,7 +676,6 @@
     } catch(e){ holidayByYear.set(year, new Map()); }
   }
 
-  // --- Lokale, hochpräzise astronomische Berechnung (Sicher, schnell, immer verfügbar!) ---
   function getSunsetRostock(dateISO) {
     const d = new Date(dateISO + "T12:00:00Z");
     const startOfYear = new Date(Date.UTC(d.getUTCFullYear(), 0, 0));
@@ -674,7 +685,6 @@
     const lat = 54.0924;
     const lng = 12.0991;
 
-    // NOAA Solar Calculations
     const gamma = (2 * Math.PI / 365) * (dayOfYear - 1 + (12 - 12) / 24);
     const eqTime = 229.18 * (0.000075 + 0.001868 * Math.cos(gamma) - 0.032077 * Math.sin(gamma) - 0.014615 * Math.cos(2 * gamma) - 0.040849 * Math.sin(2 * gamma));
     const decl = 0.006918 - 0.399912 * Math.cos(gamma) + 0.070257 * Math.sin(gamma) - 0.006758 * Math.cos(2 * gamma) + 0.000907 * Math.sin(2 * gamma) - 0.002697 * Math.cos(3 * gamma) + 0.00148 * Math.sin(3 * gamma);
@@ -794,7 +804,7 @@
     const dateISO = dateEl.value; const duration = Number(pkgEl.value);
     if(!dateISO){ setStartOptions([], ""); updateCtas(); return; }
     try{
-      const sunset = getSunsetRostock(dateISO); // Nutzt jetzt die lokale Formel
+      const sunset = getSunsetRostock(dateISO); 
       const previouslySelected = startEl.value;
       const { allowed } = computeAllowedStartHours(dateISO, sunset, duration);
       const filtered = filterByBookings(dateISO, duration, allowed);
@@ -958,7 +968,7 @@
     calDayTitleEl.textContent = `Wähle eine freie Startzeit:`;
     calSlotsEl.innerHTML = "";
     try{
-      const sunset = getSunsetRostock(dayISO); // Exakte Berechnung nutzen
+      const sunset = getSunsetRostock(dayISO); 
       const duration = Number(pkgEl.value);
       const { allowed } = computeAllowedStartHours(dayISO, sunset, duration);
       buildSlotButtons(dayISO, filterByBookings(dayISO, duration, allowed));
@@ -975,8 +985,11 @@
     if(calTitleEl) calTitleEl.textContent = calCursor.toLocaleDateString("de-DE", { month:"long", year:"numeric" });
     const firstDow = (new Date(year, month, 1).getDay() + 6) % 7;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const todayMs = new Date(new Date().setHours(0,0,0,0)).getTime();
+    
+    // Die heute-Logik greift nun auf die neue Funktion zu
     const todayISO = await getTodayISO();
+    const todayMs = new Date(todayISO + "T00:00:00").getTime();
+    
     const duration = Number(pkgEl.value);
     
     calGridEl.innerHTML = "";
@@ -986,12 +999,16 @@
     for(let i=0; i<firstDow; i++){ const b = document.createElement("div"); calGridEl.appendChild(b); }
     for(let day=1; day<=daysInMonth; day++){
       const d = new Date(year, month, day); d.setHours(0,0,0,0);
-      const iso = calToISODate(d), isPast = d.getTime() < todayMs;
+      const iso = calToISODate(d);
+      
+      // HIER FINDET DIE PRÜFUNG STATT:
+      // Liegt das Kalender-Datum (d) VOR dem heutigen Datum (oder dem Saisonstart)?
+      const isPast = d.getTime() < todayMs || iso < SEASON_START;
+
       const cell = document.createElement("button"); cell.type = "button"; cell.className = "cal-cell";
       
       const { reserved, confirmed } = countBlocksOnDay(iso);
       
-      // Nutze die absolut genaue astronomische Formel für die Kalender-Einfärbung!
       const exactSunset = getSunsetRostock(iso);
       const { allowed } = computeAllowedStartHours(iso, exactSunset, duration);
       const freeSlots = filterByBookings(iso, duration, allowed);
@@ -1006,7 +1023,7 @@
         else if(isPartiallyBooked) cell.classList.add("partially-booked");
       }
 
-      if(iso === todayISO) cell.classList.add("today");
+      if(iso === todayISO && !isPast) cell.classList.add("today"); // Hebt "Heute" (oder den 01.04.) nur hervor, wenn er nicht in der Vergangenheit liegt.
       if(calSelectedISO === iso) cell.classList.add("selected");
       
       const num = document.createElement("div"); num.className = "cal-num"; num.textContent = day; cell.appendChild(num);
@@ -1028,9 +1045,12 @@
 
   calPrevEl?.addEventListener("click", async () => { calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()-1, 1); await renderCalendar(); });
   calNextEl?.addEventListener("click", async () => { calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()+1, 1); await renderCalendar(); });
+  
+  // Der Heute-Button springt nun, falls heute < Saisonstart, automatisch zum Saisonstart!
   calTodayEl?.addEventListener("click", async () => {
-    const todayISO = await getTodayISO(); calCursor = new Date(todayISO + "T00:00:00"); calCursor.setDate(1); calCursor.setHours(0,0,0,0);
-    calSelectedISO = todayISO; await renderCalendar(); dateEl.value = todayISO; await refresh(); showDaySlots(todayISO);
+    const startISO = await getTodayISO(); 
+    calCursor = new Date(startISO + "T00:00:00"); calCursor.setDate(1); calCursor.setHours(0,0,0,0);
+    calSelectedISO = startISO; await renderCalendar(); dateEl.value = startISO; await refresh(); showDaySlots(startISO);
   });
   
   pkgEl?.addEventListener("change", async () => { 
@@ -1052,8 +1072,8 @@
   async function init(){
     try {
       await setTodayDate();
-      const todayISO = dateEl.value || await getTodayISO();
-      calCursor = new Date(todayISO + "T00:00:00"); calCursor.setDate(1); calCursor.setHours(0,0,0,0);
+      const startISO = dateEl.value || await getTodayISO();
+      calCursor = new Date(startISO + "T00:00:00"); calCursor.setDate(1); calCursor.setHours(0,0,0,0);
       
       await Promise.all([ loadPublicCalendar(), loadHolidaysForYear(new Date().getFullYear()) ]);
       await renderCalendar(); await refresh(); if(calSelectedISO) showDaySlots(calSelectedISO); updateCtas();
