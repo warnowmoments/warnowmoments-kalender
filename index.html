@@ -48,7 +48,7 @@
       margin-left: auto;
       margin-right: auto;
       overflow-x: hidden; 
-      background: transparent; /* Wichtig für iframe, damit es sich einfügt */
+      background: transparent; 
     }
 
     .dashboard-layout {
@@ -78,8 +78,24 @@
 
     select,input[type="text"],input[type="email"],input[type="tel"],input[type="date"],button,textarea{ font: inherit; }
 
+    /* HIER IST DER FIX FÜR DAS HANDY EINGEBAUT */
     select,input[type="text"],input[type="email"],input[type="tel"],input[type="date"],textarea{
-      padding:14px 16px; width:100%; max-width:100%; font-size: var(--fs-ui); border: 1px solid var(--c-border); border-radius: 16px; background: #fff; transition: all 0.2s ease;
+      padding:14px 16px; 
+      width:100%; 
+      max-width:100%; 
+      font-size: var(--fs-ui); 
+      border: 1px solid var(--c-border); 
+      border-radius: 16px; 
+      background: #fff; 
+      transition: all 0.2s ease;
+      box-sizing: border-box !important; 
+      min-width: 0 !important; 
+    }
+    
+    /* Nimmt dem Datum das native Safari-Design, das für den Ausbruch sorgt */
+    input[type="date"] {
+      -webkit-appearance: none;
+      appearance: none;
     }
     
     select:focus,input:focus,textarea:focus { outline: none; border-color: var(--c-primary); box-shadow: 0 0 0 4px rgba(29,51,74,.08); }
@@ -89,7 +105,9 @@
     input[type="date"][readonly] { background: #f3f4f6; color: var(--c-primary); font-weight: var(--fw-strong); pointer-events: none; }
     textarea{ min-height: 110px; resize: vertical; border-radius: 20px; }
 
+    /* Fix für Grid auf iOS */
     .grid{ display:grid; grid-template-columns: 1fr; gap:16px; align-items:end; }
+    .grid > div { min-width: 0; } 
     @media (min-width: 500px) { .grid-2col { grid-template-columns: 1fr 1fr; } }
 
     .btn, .btn2{ display:inline-block; padding:12px 24px; border-radius: var(--radius-btn); border:1px solid var(--c-primary); text-decoration:none; font-weight: var(--fw-strong); font-size: var(--fs-ui); line-height: 1.2; cursor:pointer; background:#fff; color: var(--c-primary); transition: all 0.2s; }
@@ -778,7 +796,7 @@
   ctaEl?.addEventListener("click", submitReservation);
   tipCloseEl?.addEventListener("click", tipClose);
 
-  // NEU: Der Messenger, der die Höhe an Squarespace funkt!
+  // Der Messenger, der die Höhe an Squarespace funkt!
   let resizeTimeout;
   function wmPostHeight(){
     const h = Math.max(
@@ -799,7 +817,7 @@
       await Promise.all([ loadPublicCalendar(), loadHolidaysForYear(new Date().getFullYear()) ]);
       await renderCalendar(); await refresh(); if(calSelectedISO) showDaySlots(calSelectedISO); updateCtas();
 
-      // NEU: Aktiviert den Messenger
+      // Aktiviert den Messenger
       if ("ResizeObserver" in window) {
         const ro = new ResizeObserver(() => { 
           clearTimeout(resizeTimeout); 
