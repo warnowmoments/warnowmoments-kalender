@@ -78,10 +78,10 @@
 
     select,input[type="text"],input[type="email"],input[type="tel"],input[type="date"],button,textarea{ font: inherit; }
 
-    /* --- HIER IST DER FIX FÜR DIE EINHEITLICHEN HÖHEN --- */
+    /* --- DER FIX FÜR DIE ABSOLUT EINHEITLICHEN HÖHEN --- */
     select,input[type="text"],input[type="email"],input[type="tel"],input[type="date"],textarea{
-      width:100%; 
-      max-width:100%; 
+      width:100% !important; 
+      max-width:100% !important; 
       font-size: var(--fs-ui); 
       border: 1px solid var(--c-border); 
       border-radius: 16px; 
@@ -89,26 +89,31 @@
       transition: all 0.2s ease;
       box-sizing: border-box !important; 
       min-width: 0 !important; 
+      margin: 0 !important;
     }
     
-    /* Alle einzeiligen Felder sind exakt 54px hoch, der Text ist perfekt mittig */
+    /* Alle einzeiligen Felder sind ab sofort unter allen Umständen exakt 54px hoch */
     select, input[type="text"], input[type="email"], input[type="tel"], input[type="date"] {
-      height: 54px;
-      padding: 0 16px;
+      height: 54px !important;
+      min-height: 54px !important;
+      max-height: 54px !important;
+      padding: 0 16px !important;
+      line-height: normal !important;
     }
 
     /* Das Textfeld für die Nachricht bekommt seine eigene Höhe */
     textarea { 
-      min-height: 110px; 
+      min-height: 110px !important; 
       resize: vertical; 
       border-radius: 20px; 
-      padding: 14px 16px;
+      padding: 14px 16px !important;
     }
     
-    /* Nimmt dem Datum das native Safari-Design, das für den Handy-Ausbruch sorgte */
+    /* Nimmt dem Datum das native Design, das für den Handy-Ausbruch sorgte */
     input[type="date"] {
-      -webkit-appearance: none;
-      appearance: none;
+      -webkit-appearance: none !important;
+      -moz-appearance: none !important;
+      appearance: none !important;
     }
     /* ---------------------------------------------------- */
     
@@ -809,7 +814,6 @@
   ctaEl?.addEventListener("click", submitReservation);
   tipCloseEl?.addEventListener("click", tipClose);
 
-  // Der Messenger, der die Höhe an Squarespace funkt
   let resizeTimeout;
   function wmPostHeight(){
     const h = Math.max(
@@ -830,7 +834,6 @@
       await Promise.all([ loadPublicCalendar(), loadHolidaysForYear(new Date().getFullYear()) ]);
       await renderCalendar(); await refresh(); if(calSelectedISO) showDaySlots(calSelectedISO); updateCtas();
 
-      // Aktiviert den Messenger
       if ("ResizeObserver" in window) {
         const ro = new ResizeObserver(() => { 
           clearTimeout(resizeTimeout); 
