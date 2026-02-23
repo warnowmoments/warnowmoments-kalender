@@ -1,253 +1,263 @@
-<style>
-  #wm-booking-app {
-    --font: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-    --fs-base: 16px;
-    --lh-base: 1.45;
-    --fs-h1: 34px;
-    --lh-h1: 1.12;
-    --fs-label: 15px;
-    --fs-ui: 16px;
-    --fs-muted: 14px;
-    --fw-regular: 500;
-    --fw-strong: 800;
-    --c-text: #0f172a;
-    --c-muted: #4b5563;
-    --c-border: #e5e7eb;
-    --c-bg-pill: #f3f4f6;
-    --c-primary: #1d334a;
-    --c-error: #b91c1c;
-    --c-res: #d97706;  
-    --c-conf: #64748b; 
-    --radius: 24px; 
-    --radius-btn: 999px; 
-    --pad: 24px; 
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Warnow Moments – Verfügbarkeit</title>
+  <style>
+    :root{
+      --font: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      --fs-base: 16px;
+      --lh-base: 1.45;
 
-    font-family: var(--font);
-    font-size: var(--fs-base);
-    line-height: var(--lh-base);
-    color: var(--c-text);
-    width: 100%;
-    margin: 0 auto;
-    overflow-x: hidden;
-  }
+      --fs-h1: 34px;
+      --lh-h1: 1.12;
 
-  #wm-booking-app *, #wm-booking-app *::before, #wm-booking-app *::after { box-sizing: border-box; }
+      --fs-label: 15px;
+      --fs-ui: 16px;
+      --fs-muted: 14px;
 
-  #wm-booking-app .dashboard-layout { display: grid; grid-template-columns: 1fr; gap: 24px; align-items: start; }
-  @media (min-width: 900px) { #wm-booking-app .dashboard-layout { grid-template-columns: 1fr 1fr; } }
+      --fw-regular: 500;
+      --fw-strong: 800;
 
-  #wm-booking-app h2 { margin:0 0 20px; font-size:22px; line-height:1.2; letter-spacing: -0.02em; color: var(--c-text); }
-  #wm-booking-app h3 { margin:0 0 12px; font-size:16px; color: var(--c-text); }
-  #wm-booking-app hr { border: 0; border-top: 1px solid var(--c-border); margin: 32px 0; }
+      --c-text: #0f172a;
+      --c-muted: #4b5563;
+      --c-border: #e5e7eb;
+      --c-bg-pill: #f3f4f6;
+      --c-primary: #1d334a;
+      --c-error: #b91c1c;
 
-  #wm-booking-app .card { border:1px solid var(--c-border); border-radius: var(--radius); padding: var(--pad); background: #fff; box-shadow: 0 8px 30px rgba(0,0,0,0.04); }
+      --c-res: #d97706;  
+      --c-conf: #64748b; 
 
-  #wm-booking-app label { display:block; font-weight: var(--fw-strong); margin:10px 0 6px; font-size: var(--fs-label); padding-left: 4px; }
+      --radius: 24px; 
+      --radius-btn: 999px; 
+      --pad: 24px; 
+    }
 
-  #wm-booking-app select, #wm-booking-app input, #wm-booking-app button, #wm-booking-app textarea { font: inherit; }
+    *, *::before, *::after { box-sizing: border-box; }
 
-  #wm-booking-app select, #wm-booking-app input[type="text"], #wm-booking-app input[type="email"], #wm-booking-app input[type="tel"], #wm-booking-app input[type="date"], #wm-booking-app textarea {
-    padding:14px 16px; width:100%; max-width:100%; font-size: var(--fs-ui); border: 1px solid var(--c-border); border-radius: 16px; background: #fff; transition: all 0.2s ease;
-  }
-  
-  #wm-booking-app select:focus, #wm-booking-app input:focus, #wm-booking-app textarea:focus { outline: none; border-color: var(--c-primary); box-shadow: 0 0 0 4px rgba(29,51,74,.08); }
-  #wm-booking-app .input-error { border-color: var(--c-error) !important; background-color: #fef2f2 !important; }
+    body{
+      font-family: var(--font);
+      font-size: var(--fs-base);
+      line-height: var(--lh-base);
+      color: var(--c-text);
+      margin:0;
+      padding:16px;
+      max-width: 100%; 
+      margin-left: auto;
+      margin-right: auto;
+      overflow-x: hidden; 
+      background: transparent; /* Wichtig für iframe, damit es sich einfügt */
+    }
 
-  #wm-booking-app select:disabled, #wm-booking-app input:disabled, #wm-booking-app textarea:disabled { background: #f8fafc; color: #6b7280; cursor: not-allowed; }
-  #wm-booking-app input[type="date"][readonly] { background: #f3f4f6; color: var(--c-primary); font-weight: var(--fw-strong); pointer-events: none; }
-  #wm-booking-app textarea { min-height: 110px; resize: vertical; border-radius: 20px; }
+    .dashboard-layout {
+      display: grid;
+      grid-template-columns: 1fr; 
+      gap: 24px;
+      align-items: start;
+    }
+    @media (min-width: 900px) {
+      .dashboard-layout {
+        grid-template-columns: 1fr 1fr; 
+      }
+    }
 
-  #wm-booking-app .grid { display:grid; grid-template-columns: 1fr; gap:16px; align-items:end; }
-  @media (min-width: 500px) { #wm-booking-app .grid-2col { grid-template-columns: 1fr 1fr; } }
+    h2{ margin:0 0 20px; font-size:22px; line-height:1.2; letter-spacing: -0.02em; }
+    h3{ margin:0 0 12px; font-size:16px; }
 
-  #wm-booking-app .btn, #wm-booking-app .btn2, #wm-booking-app .btn-slot {
-    display:inline-block; border-radius: var(--radius-btn); border:1px solid var(--c-primary); text-decoration:none; font-weight: var(--fw-strong); font-size: var(--fs-ui); line-height: 1.2; cursor:pointer; background:#fff; color: var(--c-primary); transition: all 0.2s;
-  }
-  #wm-booking-app .btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(29,51,74,.15); }
-  #wm-booking-app .btn2:hover, #wm-booking-app .btn-slot:hover { background: #f8fafc; transform: translateY(-1px); }
-  #wm-booking-app .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
-  #wm-booking-app .btn { background: var(--c-primary); color:#fff; padding:12px 24px; }
-  #wm-booking-app .btn2 { padding:12px 24px; }
-  #wm-booking-app .btn-slot { padding:10px 18px; }
-  #wm-booking-app .btn-slot.selected-slot { background: var(--c-primary); color: #fff; box-shadow: 0 4px 12px rgba(29,51,74,.25); border-color: var(--c-primary); }
-  #wm-booking-app .btn-full { width: 100%; text-align: center; display: block; }
+    .card{
+      border:1px solid var(--c-border);
+      border-radius: var(--radius);
+      padding: var(--pad);
+      background: #fff;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.04); 
+    }
 
-  #wm-booking-app .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center }
-  #wm-booking-app .muted { color: var(--c-muted); font-size: var(--fs-muted); line-height: 1.35; }
-  #wm-booking-app .error { color: var(--c-error); font-weight: var(--fw-strong); font-size: var(--fs-muted); line-height: 1.35; }
-  #wm-booking-app .pill { display:inline-block; padding:6px 14px; border-radius:999px; background: var(--c-bg-pill); font-weight: var(--fw-strong); font-size: var(--fs-muted); line-height: 1.2; }
-  #wm-booking-app .kv { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px }
+    label{ display:block; font-weight: var(--fw-strong); margin:10px 0 6px; font-size: var(--fs-label); padding-left: 4px; }
 
-  #wm-booking-app #cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
-  #wm-booking-app .cal-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 64px; border: 1px solid var(--c-border); border-radius: 14px; background: #fff; transition: all 0.2s ease; padding: 6px 2px; }
-  #wm-booking-app .cal-cell:hover:not([disabled]) { background: #f8fafc; border-color: #cbd5e1; transform: scale(1.02); }
-  
-  #wm-booking-app .cal-cell.partially-booked { background: linear-gradient(135deg, #ffffff 55%, #f1f5f9 55%); }
-  #wm-booking-app .cal-cell.partially-booked:hover:not([disabled]) { background: linear-gradient(135deg, #f8fafc 55%, #e2e8f0 55%); }
-  #wm-booking-app .cal-cell.fully-booked { background: #f1f5f9; color: var(--c-muted); }
-  #wm-booking-app .cal-cell.fully-booked:hover:not([disabled]) { background: #e2e8f0; }
-  #wm-booking-app .cal-cell.selected { background: var(--c-primary) !important; color: #fff !important; border-color: var(--c-primary) !important; box-shadow: 0 4px 12px rgba(29,51,74,.25); z-index: 2; }
-  #wm-booking-app .cal-cell.today:not(.selected) { background: rgba(29,51,74,.06); border-color: rgba(29,51,74,.2); }
-  #wm-booking-app .cal-cell[disabled] { cursor: not-allowed; opacity: 0.4; background: #f9fafb; border-radius: 12px; }
-  #wm-booking-app .cal-num { font-weight: 900; font-size: 15px; }
-  #wm-booking-app .holiday-label { margin-top: 2px; font-size: 10px; line-height: 1.1; font-weight: 800; color: inherit; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-  #wm-booking-app .cal-badge { margin-top: 2px; font-size: 10px; font-weight: 800; opacity: 0.8; color: inherit; }
+    select,input[type="text"],input[type="email"],input[type="tel"],input[type="date"],button,textarea{ font: inherit; }
 
-  #wm-booking-app .tl-wrap { border:1px solid var(--c-border); border-radius: 16px; padding:16px; background:#f8fafc; margin-top:20px; }
-  #wm-booking-app .tl-scale { display:flex; justify-content:space-between; gap:10px; font-size:12px; color: var(--c-muted); font-weight:800; margin-bottom:10px; }
-  #wm-booking-app .tl-bar { position:relative; height:16px; border-radius:999px; background: linear-gradient(90deg, #e2e8f0, #cbd5e1); overflow:hidden; }
-  #wm-booking-app .tl-block { position:absolute; top:0; bottom:0; border-radius:999px; opacity:0.95; cursor:pointer; transition: transform 0.2s; }
-  #wm-booking-app .tl-block:hover { transform: scaleY(1.2); }
-  #wm-booking-app .tl-block.res { background: var(--c-res); }
-  #wm-booking-app .tl-block.conf { background: var(--c-conf); }
+    select,input[type="text"],input[type="email"],input[type="tel"],input[type="date"],textarea{
+      padding:14px 16px; width:100%; max-width:100%; font-size: var(--fs-ui); border: 1px solid var(--c-border); border-radius: 16px; background: #fff; transition: all 0.2s ease;
+    }
+    
+    select:focus,input:focus,textarea:focus { outline: none; border-color: var(--c-primary); box-shadow: 0 0 0 4px rgba(29,51,74,.08); }
+    .input-error { border-color: var(--c-error) !important; background-color: #fef2f2 !important; }
 
-  #wm-booking-app .tl-legend { display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; font-size:12px; color: var(--c-muted); font-weight:800; }
-  #wm-booking-app .tl-dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:6px; transform: translateY(1px); }
-  #wm-booking-app .tl-dot.res { background: var(--c-res); }
-  #wm-booking-app .tl-dot.conf { background: var(--c-conf); }
+    select:disabled, input:disabled, textarea:disabled{ background: #f8fafc; color: #6b7280; cursor: not-allowed; }
+    input[type="date"][readonly] { background: #f3f4f6; color: var(--c-primary); font-weight: var(--fw-strong); pointer-events: none; }
+    textarea{ min-height: 110px; resize: vertical; border-radius: 20px; }
 
-  #wm-booking-app .tl-tip { position:absolute; z-index: 50; min-width: 220px; max-width: 280px; background:#fff; border:1px solid var(--c-border); border-radius: 12px; box-shadow: 0 18px 50px rgba(0,0,0,.18); padding:12px 14px; font-size: 13px; line-height: 1.25; color: var(--c-text); display:none; }
-  #wm-booking-app .tl-tip.open { display:block; }
-  #wm-booking-app .tl-tip .t-title { font-weight: 900; margin-bottom: 6px; }
-  #wm-booking-app .tl-tip .t-row { color: var(--c-muted); font-weight: 800; }
-  #wm-booking-app .tl-tip .t-close { position:absolute; top:8px; right:8px; border:1px solid var(--c-border); background:#f3f4f6; border-radius: 999px; padding:4px 8px; font-weight: 900; cursor:pointer; line-height:1; transition: background 0.2s; }
-  
-  #wm-booking-app .checkbox-row { display: flex; gap: 14px; align-items: flex-start; margin-top: 16px; margin-bottom: 8px; background: #f8fafc; padding: 16px; border-radius: 16px; transition: background 0.2s; }
-  #wm-booking-app .checkbox-row input[type="checkbox"] { margin-top: 2px; width: 22px; height: 22px; cursor: pointer; accent-color: var(--c-primary); }
-  #wm-booking-app .checkbox-row label { margin: 0; font-weight: var(--fw-regular); font-size: var(--fs-muted); color: var(--c-text); cursor: pointer; line-height: 1.5; }
-  #wm-booking-app .checkbox-row a { color: var(--c-primary); font-weight: bold; }
-</style>
+    .grid{ display:grid; grid-template-columns: 1fr; gap:16px; align-items:end; }
+    @media (min-width: 500px) { .grid-2col { grid-template-columns: 1fr 1fr; } }
 
-<div id="wm-booking-app">
-  <div class="dashboard-layout">
+    .btn, .btn2{ display:inline-block; padding:12px 24px; border-radius: var(--radius-btn); border:1px solid var(--c-primary); text-decoration:none; font-weight: var(--fw-strong); font-size: var(--fs-ui); line-height: 1.2; cursor:pointer; background:#fff; color: var(--c-primary); transition: all 0.2s; }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(29,51,74,.15); }
+    .btn2:hover { background: #f8fafc; transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn{ background: var(--c-primary); color:#fff; }
 
-    <div class="card" style="margin: 0; align-self: start;">
-      <div class="row" style="justify-content:space-between;align-items:center; margin-bottom: 20px;">
-        <h2>1. Datum wählen</h2>
-        <div class="row" style="gap: 8px;">
-          <button class="btn2" style="padding: 6px 12px; font-size: 14px;" type="button" id="cal-prev" aria-label="Vorheriger Monat">←</button>
-          <button class="btn2" style="padding: 6px 12px; font-size: 14px;" type="button" id="cal-today">Heute</button>
-          <button class="btn2" style="padding: 6px 12px; font-size: 14px;" type="button" id="cal-next" aria-label="Nächster Monat">→</button>
-        </div>
+    .btn-slot { display:inline-block; padding:10px 18px; border-radius: 999px; border:1px solid var(--c-primary); text-decoration:none; font-weight: var(--fw-strong); font-size: var(--fs-ui); line-height: 1.2; cursor:pointer; background:#fff; color: var(--c-primary); transition: all 0.2s; }
+    .btn-slot:hover { background: #f8fafc; transform: translateY(-1px); }
+    .btn-slot.selected-slot { background: var(--c-primary); color: #fff; box-shadow: 0 4px 12px rgba(29,51,74,.25); border-color: var(--c-primary); }
+    .btn-full { width: 100%; text-align: center; display: block; }
+
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .muted{ color: var(--c-muted); font-size: var(--fs-muted); line-height: 1.35; }
+    .error{ color: var(--c-error); font-weight: var(--fw-strong); font-size: var(--fs-muted); line-height: 1.35; }
+    .pill{ display:inline-block; padding:6px 14px; border-radius:999px; background: var(--c-bg-pill); font-weight: var(--fw-strong); font-size: var(--fs-muted); line-height: 1.2; }
+    .kv{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+
+    #cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+    .cal-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 64px; border: 1px solid var(--c-border); border-radius: 14px; background: #fff; transition: all 0.2s ease; padding: 6px 2px; }
+    .cal-cell:hover:not([disabled]) { background: #f8fafc; border-color: #cbd5e1; transform: scale(1.02); }
+    .cal-cell.partially-booked { background: linear-gradient(135deg, #ffffff 55%, #f1f5f9 55%); }
+    .cal-cell.partially-booked:hover:not([disabled]) { background: linear-gradient(135deg, #f8fafc 55%, #e2e8f0 55%); }
+    .cal-cell.fully-booked { background: #f1f5f9; color: var(--c-muted); }
+    .cal-cell.fully-booked:hover:not([disabled]) { background: #e2e8f0; }
+    .cal-cell.selected { background: var(--c-primary) !important; color: #fff !important; border-color: var(--c-primary) !important; box-shadow: 0 4px 12px rgba(29,51,74,.25); z-index: 2; }
+    .cal-cell.today:not(.selected) { background: rgba(29,51,74,.06); border-color: rgba(29,51,74,.2); }
+    .cal-cell[disabled] { cursor: not-allowed; opacity: 0.4; background: #f9fafb; border-radius: 12px; }
+    .cal-num { font-weight: 900; font-size: 15px; }
+    .holiday-label{ margin-top: 2px; font-size: 10px; line-height: 1.1; font-weight: 800; color: inherit; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .cal-badge { margin-top: 2px; font-size: 10px; font-weight: 800; opacity: 0.8; color: inherit; }
+
+    .tl-wrap{ border:1px solid var(--c-border); border-radius: 16px; padding:16px; background:#f8fafc; margin-top:20px; }
+    .tl-scale{ display:flex; justify-content:space-between; gap:10px; font-size:12px; color: var(--c-muted); font-weight:800; margin-bottom:10px; }
+    .tl-bar{ position:relative; height:16px; border-radius:999px; background: linear-gradient(90deg, #e2e8f0, #cbd5e1); overflow:hidden; }
+    .tl-block{ position:absolute; top:0; bottom:0; border-radius:999px; opacity:0.95; cursor:pointer; transition: transform 0.2s; }
+    .tl-block:hover { transform: scaleY(1.2); }
+    .tl-block.res{ background: var(--c-res); }
+    .tl-block.conf{ background: var(--c-conf); }
+
+    .tl-legend{ display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; font-size:12px; color: var(--c-muted); font-weight:800; }
+    .tl-dot{ width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px; transform: translateY(1px); }
+    .tl-dot.res{ background: var(--c-res); }
+    .tl-dot.conf{ background: var(--c-conf); }
+
+    .tl-tip{ position:absolute; z-index: 50; min-width: 220px; max-width: 280px; background:#fff; border:1px solid var(--c-border); border-radius: 12px; box-shadow: 0 18px 50px rgba(0,0,0,.18); padding:12px 14px; font-size: 13px; line-height: 1.25; color: var(--c-text); display:none; }
+    .tl-tip.open{ display:block; }
+    .tl-tip .t-title{ font-weight: 900; margin-bottom: 6px; }
+    .tl-tip .t-row{ color: var(--c-muted); font-weight: 800; }
+    .tl-tip .t-close{ position:absolute; top:8px; right:8px; border:1px solid var(--c-border); background:#f3f4f6; border-radius: 999px; padding:4px 8px; font-weight: 900; cursor:pointer; line-height:1; transition: background 0.2s; }
+    
+    .checkbox-row { display: flex; gap: 14px; align-items: flex-start; margin-top: 16px; margin-bottom: 8px; background: #f8fafc; padding: 16px; border-radius: 16px; transition: background 0.2s; }
+    .checkbox-row input[type="checkbox"] { margin-top: 2px; width: 22px; height: 22px; cursor: pointer; accent-color: var(--c-primary); }
+    .checkbox-row label { margin: 0; font-weight: var(--fw-regular); font-size: var(--fs-muted); color: var(--c-text); cursor: pointer; line-height: 1.5; }
+    .checkbox-row a { color: var(--c-primary); font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<div class="dashboard-layout">
+  <div class="card" style="margin: 0; align-self: start;">
+    <div class="row" style="justify-content:space-between;align-items:center; margin-bottom: 20px;">
+      <h2>1. Datum wählen</h2>
+      <div class="row" style="gap: 8px;">
+        <button class="btn2" style="padding: 6px 12px; font-size: 14px;" type="button" id="cal-prev" aria-label="Vorheriger Monat">←</button>
+        <button class="btn2" style="padding: 6px 12px; font-size: 14px;" type="button" id="cal-today">Heute</button>
+        <button class="btn2" style="padding: 6px 12px; font-size: 14px;" type="button" id="cal-next" aria-label="Nächster Monat">→</button>
       </div>
-      
-      <div class="pill" id="cal-title" style="margin-bottom: 16px; display: inline-block;">–</div>
-      <div id="cal-grid"></div>
+    </div>
+    <div class="pill" id="cal-title" style="margin-bottom: 16px; display: inline-block;">–</div>
+    <div id="cal-grid"></div>
+  </div>
+
+  <div class="card" style="margin: 0; align-self: start;">
+    <h2>2. Details & Zeit</h2>
+    <div class="grid grid-2col">
+      <div>
+        <label for="date">Gewähltes Datum</label>
+        <input id="date" type="date" required readonly title="Bitte nutze den Kalender links zur Auswahl" />
+      </div>
+      <div>
+        <label for="package">Paket</label>
+        <select id="package" required>
+          <option value="4">Explorer‑Tour (4 Std.)</option>
+          <option value="6">Halbtags‑Cruise (6 Std.)</option>
+          <option value="8">Ganztags‑Abenteuer (8 Std.)</option>
+        </select>
+      </div>
     </div>
 
-    <div class="card" style="margin: 0; align-self: start;">
-      <h2>2. Details & Zeit</h2>
-      
-      <div class="grid grid-2col">
-        <div>
-          <label for="date">Gewähltes Datum</label>
-          <input id="date" type="date" required readonly title="Bitte nutze den Kalender links zur Auswahl" />
-        </div>
+    <div style="display:none;"><select id="start" required></select></div>
 
-        <div>
-          <label for="package">Paket</label>
-          <select id="package" required>
-            <option value="4">Explorer‑Tour (4 Std.)</option>
-            <option value="6">Halbtags‑Cruise (6 Std.)</option>
-            <option value="8">Ganztags‑Abenteuer (8 Std.)</option>
-          </select>
-        </div>
-      </div>
-
-      <div style="display:none;"><select id="start" required></select></div>
-
-      <div style="margin-top: 24px;">
-        <h3>Tagesbelegung & Startzeiten</h3>
-        
-        <div class="tl-wrap" id="cal-timeline-wrap" style="display:none; margin-top: 0; margin-bottom: 12px;">
-          <div class="tl-scale" id="cal-timeline-scale"></div>
-          <div class="tl-bar" id="cal-timeline-bar" aria-label="Belegungen als Zeitleiste">
-            <div class="tl-tip" id="tl-tip" role="dialog" aria-modal="false" aria-label="Belegungsdetails">
-              <button class="t-close" type="button" id="tl-tip-close" aria-label="Schließen">×</button>
-              <div class="t-title" id="tl-tip-title">–</div>
-              <div class="t-row" id="tl-tip-time">–</div>
-              <div class="t-row" id="tl-tip-dur">–</div>
-            </div>
-          </div>
-          <div class="tl-legend">
-            <span><span class="tl-dot conf"></span>Gebucht</span>
-            <span><span class="tl-dot res"></span>Reserviert</span>
+    <div style="margin-top: 24px;">
+      <h3>Tagesbelegung & Startzeiten</h3>
+      <div class="tl-wrap" id="cal-timeline-wrap" style="display:none; margin-top: 0; margin-bottom: 12px;">
+        <div class="tl-scale" id="cal-timeline-scale"></div>
+        <div class="tl-bar" id="cal-timeline-bar" aria-label="Belegungen als Zeitleiste">
+          <div class="tl-tip" id="tl-tip" role="dialog" aria-modal="false" aria-label="Belegungsdetails">
+            <button class="t-close" type="button" id="tl-tip-close" aria-label="Schließen">×</button>
+            <div class="t-title" id="tl-tip-title">–</div>
+            <div class="t-row" id="tl-tip-time">–</div>
+            <div class="t-row" id="tl-tip-dur">–</div>
           </div>
         </div>
-
-        <div id="cal-blocks" style="margin-bottom: 16px;"></div>
-
-        <p class="muted" id="cal-day-title" style="margin:0 0 8px; font-weight: bold;"></p>
-        <div id="cal-slots" class="row" style="flex-wrap:wrap;gap:8px;"></div>
-      </div>
-
-      <div class="kv" style="margin-top: 20px;">
-        <span class="pill" id="selected-pill">Auswahl: –</span>
-        <span class="muted" id="sunset-pill"></span>
-      </div>
-
-      <p class="error" id="err" style="display:none;margin-top:12px"></p>
-
-      <hr>
-
-      <h2>3. Kontaktdaten</h2>
-
-      <div class="grid grid-2col">
-        <div>
-          <label for="name">Name</label>
-          <input id="name" type="text" autocomplete="name" placeholder="Max Mustermann" required />
-        </div>
-        <div>
-          <label for="phone">Telefonnummer</label>
-          <input id="phone" type="tel" autocomplete="tel" placeholder="0151 1234567" required />
+        <div class="tl-legend">
+          <span><span class="tl-dot conf"></span>Gebucht</span>
+          <span><span class="tl-dot res"></span>Reserviert</span>
         </div>
       </div>
-
-      <div style="margin-top:16px">
-        <label for="email">E‑Mail Adresse</label>
-        <input id="email" type="email" autocomplete="email" placeholder="mail@beispiel.de" required />
-      </div>
-
-      <div style="margin-top:16px">
-        <label for="message">Nachricht</label>
-        <textarea id="message" placeholder="Optional: z.B. Teilnehmerzahl, besondere Wünsche, Rückfragen …"></textarea>
-      </div>
-
-      <div class="checkbox-row" style="margin-top: 24px;">
-        <input type="checkbox" id="copyCustomer" />
-        <label for="copyCustomer">
-          Bitte senden Sie mir eine Kopie dieser Anfrage an meine E-Mail-Adresse.
-        </label>
-      </div>
-
-      <div class="checkbox-row">
-        <input type="checkbox" id="privacy" required />
-        <label for="privacy">
-          Ich stimme zu, dass meine Angaben erhoben und verarbeitet werden. 
-          Details siehe <a href="https://warnowmoments.de/datenschutzerklaerung" target="_blank" rel="noopener">Datenschutzerklärung</a>.
-        </label>
-      </div>
-
-      <div class="grid grid-2col" style="margin-top: 28px; gap: 12px;">
-        <div>
-          <button class="btn btn-full" id="cta" type="button">Anfragen</button>
-        </div>
-        <div>
-          <a class="btn2 btn-full" id="cta2" href="https://warnowmoments.de/contact" target="_blank" rel="noopener">
-            Kontakt aufnehmen
-          </a>
-        </div>
-      </div>
-      
-      <div style="text-align: center; margin-top: 12px;">
-        <span class="muted" id="cta-status" aria-live="polite" style="font-weight: bold; color: var(--c-conf);"></span>
-      </div>
-
-      <p class="muted" style="margin-top:20px; text-align: center; font-size: 13px;">
-        Hinweis: Bitte ca. 30 Minuten vor Start für Einweisung vor Ort sein. Rückgabe/Anlegen erfolgt nach der Fahrt (ca. 30 Min. eingeplant).
-      </p>
+      <div id="cal-blocks" style="margin-bottom: 16px;"></div>
+      <p class="muted" id="cal-day-title" style="margin:0 0 8px; font-weight: bold;"></p>
+      <div id="cal-slots" class="row" style="flex-wrap:wrap;gap:8px;"></div>
     </div>
 
+    <div class="kv" style="margin-top: 20px;">
+      <span class="pill" id="selected-pill">Auswahl: –</span>
+      <span class="muted" id="sunset-pill"></span>
+    </div>
+
+    <p class="error" id="err" style="display:none;margin-top:12px"></p>
+
+    <hr style="border: 0; border-top: 1px solid var(--c-border); margin: 32px 0;">
+
+    <h2>3. Kontaktdaten</h2>
+    <div class="grid grid-2col">
+      <div>
+        <label for="name">Name</label>
+        <input id="name" type="text" autocomplete="name" placeholder="Max Mustermann" required />
+      </div>
+      <div>
+        <label for="phone">Telefonnummer</label>
+        <input id="phone" type="tel" autocomplete="tel" placeholder="0151 1234567" required />
+      </div>
+    </div>
+    <div style="margin-top:16px">
+      <label for="email">E‑Mail Adresse</label>
+      <input id="email" type="email" autocomplete="email" placeholder="mail@beispiel.de" required />
+    </div>
+    <div style="margin-top:16px">
+      <label for="message">Nachricht</label>
+      <textarea id="message" placeholder="Optional: z.B. Teilnehmerzahl, besondere Wünsche, Rückfragen …"></textarea>
+    </div>
+
+    <div class="checkbox-row" style="margin-top: 24px;">
+      <input type="checkbox" id="copyCustomer" />
+      <label for="copyCustomer">Bitte senden Sie mir eine Kopie dieser Anfrage an meine E-Mail-Adresse.</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="privacy" required />
+      <label for="privacy">
+        Ich stimme zu, dass meine Angaben erhoben und verarbeitet werden. 
+        Details siehe <a href="https://warnowmoments.de/datenschutzerklaerung" target="_blank" rel="noopener">Datenschutzerklärung</a>.
+      </label>
+    </div>
+
+    <div class="grid grid-2col" style="margin-top: 28px; gap: 12px;">
+      <div><button class="btn btn-full" id="cta" type="button">Anfragen</button></div>
+      <div><a class="btn2 btn-full" id="cta2" href="https://warnowmoments.de/contact" target="_blank" rel="noopener">Kontakt aufnehmen</a></div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 12px;">
+      <span class="muted" id="cta-status" aria-live="polite" style="font-weight: bold; color: var(--c-conf);"></span>
+    </div>
+
+    <p class="muted" style="margin-top:20px; text-align: center; font-size: 13px;">
+      Hinweis: Bitte ca. 30 Minuten vor Start für Einweisung vor Ort sein. Rückgabe/Anlegen erfolgt nach der Fahrt (ca. 30 Min. eingeplant).
+    </p>
   </div>
 </div>
 
@@ -768,6 +778,18 @@
   ctaEl?.addEventListener("click", submitReservation);
   tipCloseEl?.addEventListener("click", tipClose);
 
+  // NEU: Der Messenger, der die Höhe an Squarespace funkt!
+  let resizeTimeout;
+  function wmPostHeight(){
+    const h = Math.max(
+      document.documentElement.scrollHeight, 
+      document.body?.scrollHeight || 0, 
+      document.documentElement.offsetHeight, 
+      document.body?.offsetHeight || 0
+    ) + 30; // +30 Pixel Puffer zur Sicherheit
+    window.parent?.postMessage({ type: "wm-iframe-height", height: h }, "*");
+  }
+
   async function init(){
     try {
       await setTodayDate();
@@ -776,9 +798,22 @@
       
       await Promise.all([ loadPublicCalendar(), loadHolidaysForYear(new Date().getFullYear()) ]);
       await renderCalendar(); await refresh(); if(calSelectedISO) showDaySlots(calSelectedISO); updateCtas();
+
+      // NEU: Aktiviert den Messenger
+      if ("ResizeObserver" in window) {
+        const ro = new ResizeObserver(() => { 
+          clearTimeout(resizeTimeout); 
+          resizeTimeout = setTimeout(wmPostHeight, 50); 
+        });
+        ro.observe(document.documentElement);
+      }
+      wmPostHeight();
+
     } catch(e) { setError("Initialisierung fehlgeschlagen. Bitte Seite neu laden."); }
   }
 
   init();
 })();
 </script>
+</body>
+</html>
