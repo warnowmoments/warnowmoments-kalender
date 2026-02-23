@@ -30,9 +30,8 @@
       --c-res: #ef6c00;
       --c-conf: #1b5e20;
 
-      /* NEU: Viel weichere, besondere Rundungen */
       --radius: 24px; 
-      --radius-btn: 999px; /* Pill-Shape für Buttons */
+      --radius-btn: 999px; 
       --pad: 24px; 
     }
 
@@ -45,8 +44,23 @@
       color: var(--c-text);
       margin:0;
       padding:16px;
-      max-width:980px;
+      max-width: 1200px; /* Etwas breiter für das Zwei-Spalten-Layout */
+      margin-left: auto;
+      margin-right: auto;
       overflow-x: hidden; 
+    }
+
+    /* NEU: Das Zwei-Spalten-Layout */
+    .dashboard-layout {
+      display: grid;
+      grid-template-columns: 1fr; /* Auf Handys: Untereinander */
+      gap: 24px;
+      align-items: start;
+    }
+    @media (min-width: 900px) {
+      .dashboard-layout {
+        grid-template-columns: 1fr 1fr; /* Auf PC: Nebeneinander (50/50) */
+      }
     }
 
     h1{
@@ -60,9 +74,8 @@
       border:1px solid var(--c-border);
       border-radius: var(--radius);
       padding: var(--pad);
-      margin: 16px 0;
       background: #fff;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.04); /* Etwas weicherer Schatten */
+      box-shadow: 0 8px 30px rgba(0,0,0,0.04); 
     }
 
     label{
@@ -70,7 +83,7 @@
       font-weight: var(--fw-strong);
       margin:10px 0 6px;
       font-size: var(--fs-label);
-      padding-left: 4px; /* Kleine optische Anpassung für die runden Felder */
+      padding-left: 4px;
     }
 
     select,input[type="text"],input[type="email"],input[type="tel"],input[type="date"],button,textarea{ 
@@ -83,7 +96,7 @@
       max-width:100%;
       font-size: var(--fs-ui);
       border: 1px solid var(--c-border);
-      border-radius: 16px; /* Schön runde Eingabefelder */
+      border-radius: 16px; 
       background: #fff;
       transition: all 0.2s ease;
     }
@@ -117,17 +130,15 @@
       border-radius: 20px;
     }
 
+    /* Im Formular können wir es bei 2 Feldern nebeneinander belassen, da die Spalte schmaler wird */
     .grid{
       display:grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-columns: 1fr;
       gap:16px;
       align-items:end;
     }
-    .grid > div{min-width:0;}
-
-    @media (max-width: 820px){
-      :root{ --fs-h1: 28px; }
-      .grid{grid-template-columns: 1fr;}
+    @media (min-width: 500px) {
+      .grid-2col { grid-template-columns: 1fr 1fr; }
     }
 
     .btn, .btn2{
@@ -147,7 +158,8 @@
     .btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(29,51,74,.15); }
     .btn2:hover { background: #f8fafc; transform: translateY(-1px); }
     .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
-    .btn{ background: var(--c-primary); color:#fff; }
+    .btn{ background: var(--c-primary); color:#fff; width: 100%; text-align: center; } /* Button füllt Spalte */
+    .btn2 { width: 100%; text-align: center; }
 
     .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 
@@ -173,11 +185,11 @@
     }
     .kv{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
 
-    /* KALENDER-DESIGN: "Bubble"-Look */
+    /* KALENDER-DESIGN: Wieder kompakt, aber mit runden Ecken */
     #cal-grid {
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
-      gap: 8px; 
+      gap: 6px; 
     }
     .cal-cell {
       display: flex;
@@ -185,24 +197,23 @@
       align-items: center;
       justify-content: center;
       width: 100%;
-      aspect-ratio: 1 / 1; 
+      min-height: 64px; /* Flachere Höhe wie früher */
       border: 1px solid var(--c-border);
-      border-radius: 20px; /* iPhone-App Style (Squircle) */
+      border-radius: 14px; /* Weiche Ecken, aber rechteckig */
       background: #fff;
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      padding: 4px;
+      transition: all 0.2s ease;
+      padding: 6px 2px;
     }
     .cal-cell:hover:not([disabled]) {
       background: #f8fafc;
       border-color: #cbd5e1;
-      transform: scale(1.05);
+      transform: scale(1.02);
     }
     .cal-cell.selected {
       background: var(--c-primary) !important;
       color: #fff !important;
       border-color: var(--c-primary) !important;
-      box-shadow: 0 6px 16px rgba(29,51,74,.25);
-      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(29,51,74,.25);
       z-index: 2;
     }
     .cal-cell.today:not(.selected) {
@@ -213,11 +224,11 @@
       cursor: not-allowed;
       opacity: 0.4;
       background: #f9fafb;
-      border-radius: 16px;
+      border-radius: 12px;
     }
     .cal-num {
       font-weight: 900;
-      font-size: 16px;
+      font-size: 15px;
     }
     .holiday-label{
       margin-top: 2px;
@@ -241,7 +252,7 @@
 
     .tl-wrap{
       border:1px solid var(--c-border);
-      border-radius: 20px;
+      border-radius: 16px;
       padding:16px;
       background:#f8fafc;
       margin-top:20px;
@@ -257,7 +268,7 @@
     }
     .tl-bar{
       position:relative;
-      height:18px;
+      height:16px;
       border-radius:999px;
       background: linear-gradient(90deg, #e2e8f0, #cbd5e1);
       overflow:hidden;
@@ -298,7 +309,7 @@
       max-width: 280px;
       background:#fff;
       border:1px solid var(--c-border);
-      border-radius: 16px;
+      border-radius: 12px;
       box-shadow: 0 18px 50px rgba(0,0,0,.18);
       padding:12px 14px;
       font-size: 13px;
@@ -322,7 +333,6 @@
       line-height:1;
       transition: background 0.2s;
     }
-    .tl-tip .t-close:hover { background: #e5e7eb; }
     
     .checkbox-row {
       display: flex;
@@ -334,9 +344,6 @@
       padding: 16px;
       border-radius: 16px;
       transition: background 0.2s;
-    }
-    .checkbox-row:hover {
-      background: #f1f5f9;
     }
     .checkbox-row input[type="checkbox"] {
       margin-top: 2px;
@@ -361,128 +368,139 @@
 </head>
 <body>
 
-<div class="card" style="margin-top: 0;">
-  <div class="row" style="justify-content:space-between;align-items:center; margin-bottom: 20px;">
-    <h2 style="margin:0;font-size:22px;line-height:1.2; letter-spacing: -0.02em;">1. Datum wählen</h2>
-    <div class="row" style="gap: 8px;">
-      <button class="btn2" style="padding: 8px 16px;" type="button" id="cal-prev" aria-label="Vorheriger Monat">←</button>
-      <button class="btn2" style="padding: 8px 16px;" type="button" id="cal-today">Heute</button>
-      <button class="btn2" style="padding: 8px 16px;" type="button" id="cal-next" aria-label="Nächster Monat">→</button>
+<div class="dashboard-layout">
+
+  <div class="card" style="margin: 0; align-self: start;">
+    <div class="row" style="justify-content:space-between;align-items:center; margin-bottom: 20px;">
+      <h2 style="margin:0;font-size:22px;line-height:1.2; letter-spacing: -0.02em;">1. Datum wählen</h2>
+      <div class="row" style="gap: 8px;">
+        <button class="btn2" style="padding: 6px 12px; font-size: 14px;" type="button" id="cal-prev" aria-label="Vorheriger Monat">←</button>
+        <button class="btn2" style="padding: 6px 12px; font-size: 14px;" type="button" id="cal-today">Heute</button>
+        <button class="btn2" style="padding: 6px 12px; font-size: 14px;" type="button" id="cal-next" aria-label="Nächster Monat">→</button>
+      </div>
     </div>
-  </div>
-  
-  <div class="pill" id="cal-title" style="margin-bottom: 16px; display: inline-block;">–</div>
+    
+    <div class="pill" id="cal-title" style="margin-bottom: 16px; display: inline-block;">–</div>
 
-  <div id="cal-grid"></div>
+    <div id="cal-grid"></div>
 
-  <div class="tl-wrap" id="cal-timeline-wrap" style="display:none">
-    <p class="muted" style="margin:0 0 12px 0; font-weight: bold;">Tagesbelegung (Zeitleiste):</p>
-    <div class="tl-scale" id="cal-timeline-scale"></div>
+    <div class="tl-wrap" id="cal-timeline-wrap" style="display:none">
+      <p class="muted" style="margin:0 0 12px 0; font-weight: bold;">Tagesbelegung (Zeitleiste):</p>
+      <div class="tl-scale" id="cal-timeline-scale"></div>
 
-    <div class="tl-bar" id="cal-timeline-bar" aria-label="Belegungen als Zeitleiste">
-      <div class="tl-tip" id="tl-tip" role="dialog" aria-modal="false" aria-label="Belegungsdetails">
-        <button class="t-close" type="button" id="tl-tip-close" aria-label="Schließen">×</button>
-        <div class="t-title" id="tl-tip-title">–</div>
-        <div class="t-row" id="tl-tip-time">–</div>
-        <div class="t-row" id="tl-tip-dur">–</div>
+      <div class="tl-bar" id="cal-timeline-bar" aria-label="Belegungen als Zeitleiste">
+        <div class="tl-tip" id="tl-tip" role="dialog" aria-modal="false" aria-label="Belegungsdetails">
+          <button class="t-close" type="button" id="tl-tip-close" aria-label="Schließen">×</button>
+          <div class="t-title" id="tl-tip-title">–</div>
+          <div class="t-row" id="tl-tip-time">–</div>
+          <div class="t-row" id="tl-tip-dur">–</div>
+        </div>
+      </div>
+
+      <div class="tl-legend">
+        <span><span class="tl-dot conf"></span>Gebucht</span>
+        <span><span class="tl-dot res"></span>Reserviert</span>
       </div>
     </div>
 
-    <div class="tl-legend">
-      <span><span class="tl-dot conf"></span>Gebucht</span>
-      <span><span class="tl-dot res"></span>Reserviert</span>
-    </div>
+    <p class="muted" id="cal-blocks-title" style="margin-top:20px"></p>
+    <div id="cal-blocks" style="margin-top:8px"></div>
   </div>
 
-  <p class="muted" id="cal-blocks-title" style="margin-top:20px"></p>
-  <div id="cal-blocks" style="margin-top:8px"></div>
-</div>
+  <div class="card" style="margin: 0; align-self: start;">
+    <h2 style="margin:0 0 20px;font-size:22px;line-height:1.2; letter-spacing: -0.02em;">2. Details & Startzeit</h2>
+    
+    <div class="grid grid-2col">
+      <div>
+        <label for="date">Gewähltes Datum</label>
+        <input id="date" type="date" required readonly title="Bitte nutze den Kalender links zur Auswahl" />
+      </div>
 
-<div class="card">
-  <h2 style="margin:0 0 20px;font-size:22px;line-height:1.2; letter-spacing: -0.02em;">2. Details & Startzeit</h2>
-  
-  <div class="grid">
-    <div>
-      <label for="date">Gewähltes Datum</label>
-      <input id="date" type="date" required readonly title="Bitte nutze den Kalender oben zur Auswahl" />
+      <div>
+        <label for="package">Paket</label>
+        <select id="package" required>
+          <option value="4">Explorer‑Tour (4 Std.)</option>
+          <option value="6">Halbtags‑Cruise (6 Std.)</option>
+          <option value="8">Ganztags‑Abenteuer (8 Std.)</option>
+        </select>
+      </div>
     </div>
 
-    <div>
-      <label for="package">Paket</label>
-      <select id="package" required>
-        <option value="4">Explorer‑Tour (4 Std.)</option>
-        <option value="6">Halbtags‑Cruise (6 Std.)</option>
-        <option value="8">Ganztags‑Abenteuer (8 Std.)</option>
-      </select>
-    </div>
-
-    <div>
+    <div style="margin-top: 16px;">
       <label for="start">Startzeit (volle Stunde)</label>
       <select id="start" required></select>
     </div>
-  </div>
 
-  <p class="muted" id="cal-day-title" style="margin-top:16px"></p>
-  <div id="cal-slots" class="row" style="margin-top:8px;flex-wrap:wrap"></div>
+    <p class="muted" id="cal-day-title" style="margin-top:16px"></p>
+    <div id="cal-slots" class="row" style="margin-top:8px;flex-wrap:wrap"></div>
 
-  <div class="kv" style="margin-top: 20px;">
-    <span class="pill" id="selected-pill">Auswahl: –</span>
-    <span class="muted" id="sunset-pill"></span>
-  </div>
-
-  <p class="muted" id="hint" style="margin-top:12px"></p>
-  <p class="error" id="err" style="display:none;margin-top:12px"></p>
-
-  <hr style="border: 0; border-top: 1px solid var(--c-border); margin: 32px 0;">
-
-  <h2 style="margin:0 0 20px;font-size:22px;line-height:1.2; letter-spacing: -0.02em;">3. Kontaktdaten</h2>
-
-  <div class="grid">
-    <div>
-      <label for="name">Name</label>
-      <input id="name" type="text" autocomplete="name" placeholder="Max Mustermann" required />
+    <div class="kv" style="margin-top: 20px;">
+      <span class="pill" id="selected-pill">Auswahl: –</span>
+      <span class="muted" id="sunset-pill"></span>
     </div>
-    <div>
+
+    <p class="error" id="err" style="display:none;margin-top:12px"></p>
+
+    <hr style="border: 0; border-top: 1px solid var(--c-border); margin: 32px 0;">
+
+    <h2 style="margin:0 0 20px;font-size:22px;line-height:1.2; letter-spacing: -0.02em;">3. Kontaktdaten</h2>
+
+    <div class="grid grid-2col">
+      <div>
+        <label for="name">Name</label>
+        <input id="name" type="text" autocomplete="name" placeholder="Max Mustermann" required />
+      </div>
+      <div>
+        <label for="phone">Telefonnummer</label>
+        <input id="phone" type="tel" autocomplete="tel" placeholder="0151 1234567" required />
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
       <label for="email">E‑Mail Adresse</label>
       <input id="email" type="email" autocomplete="email" placeholder="mail@beispiel.de" required />
     </div>
-    <div>
-      <label for="phone">Telefonnummer</label>
-      <input id="phone" type="tel" autocomplete="tel" placeholder="0151 1234567" required />
+
+    <div style="margin-top:16px">
+      <label for="message">Nachricht</label>
+      <textarea id="message" placeholder="Optional: z.B. Teilnehmerzahl, besondere Wünsche, Rückfragen …"></textarea>
     </div>
+
+    <div class="checkbox-row" style="margin-top: 24px;">
+      <input type="checkbox" id="copyCustomer" />
+      <label for="copyCustomer">
+        Bitte senden Sie mir eine Kopie dieser Anfrage an meine E-Mail-Adresse.
+      </label>
+    </div>
+
+    <div class="checkbox-row">
+      <input type="checkbox" id="privacy" required />
+      <label for="privacy">
+        Ich stimme zu, dass meine Angaben erhoben und verarbeitet werden. 
+        Details siehe <a href="https://warnowmoments.de/datenschutz" target="_blank" rel="noopener">Datenschutzerklärung</a>.
+      </label>
+    </div>
+
+    <div class="grid grid-2col" style="margin-top: 28px; gap: 12px;">
+      <div>
+        <button class="btn" id="cta" type="button">Anfragen</button>
+      </div>
+      <div>
+        <a class="btn2" id="cta2" href="https://warnowmoments.de/contact" target="_blank" rel="noopener">
+          Kontakt aufnehmen
+        </a>
+      </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 12px;">
+      <span class="muted" id="cta-status" aria-live="polite" style="font-weight: bold; color: var(--c-conf);"></span>
+    </div>
+
+    <p class="muted" style="margin-top:20px; text-align: center; font-size: 13px;">
+      Hinweis: Bitte ca. 30 Minuten vor Start für Einweisung vor Ort sein. Rückgabe/Anlegen erfolgt nach der Fahrt (ca. 30 Min. eingeplant).
+    </p>
   </div>
 
-  <div style="margin-top:20px">
-    <label for="message">Nachricht</label>
-    <textarea id="message" placeholder="Optional: z.B. Teilnehmerzahl, besondere Wünsche, Rückfragen …"></textarea>
-  </div>
-
-  <div class="checkbox-row" style="margin-top: 24px;">
-    <input type="checkbox" id="copyCustomer" />
-    <label for="copyCustomer">
-      Bitte senden Sie mir eine Kopie dieser Anfrage an meine E-Mail-Adresse.
-    </label>
-  </div>
-
-  <div class="checkbox-row">
-    <input type="checkbox" id="privacy" required />
-    <label for="privacy">
-      Ich stimme zu, dass meine Angaben aus dem Formular zur Beantwortung meiner Anfrage erhoben und verarbeitet werden. 
-      Details entnehmen Sie unserer <a href="https://warnowmoments.de/datenschutz" target="_blank" rel="noopener">Datenschutzerklärung</a>.
-    </label>
-  </div>
-
-  <div class="row" style="margin-top: 28px;">
-    <button class="btn" id="cta" type="button">Reservierung anfragen</button>
-    <a class="btn2" id="cta2" href="https://warnowmoments.de/contact" target="_blank" rel="noopener">
-      Kontaktformular öffnen
-    </a>
-    <span class="muted" id="cta-status" aria-live="polite" style="font-weight: bold; color: var(--c-conf);"></span>
-  </div>
-
-  <p class="muted" style="margin-top:20px">
-    Hinweis: Bitte ca. 30 Minuten vor Start für Einweisung vor Ort sein. Rückgabe/Anlegen erfolgt nach der Fahrt (ca. 30 Minuten eingeplant).
-  </p>
 </div>
 
 <script>
@@ -501,7 +519,6 @@
   const dateEl = document.getElementById("date");
   const pkgEl = document.getElementById("package");
   const startEl = document.getElementById("start");
-  const hintEl = document.getElementById("hint");
   const errEl = document.getElementById("err");
   const ctaEl = document.getElementById("cta");
   const ctaStatusEl = document.getElementById("cta-status");
@@ -709,9 +726,9 @@
   }
 
   async function refresh(){
-    setError(""); hintEl.textContent = ""; sunsetPillEl.textContent = ""; setCtaStatus("");
+    setError(""); sunsetPillEl.textContent = ""; setCtaStatus("");
     const dateISO = dateEl.value; const duration = Number(pkgEl.value);
-    if(!dateISO){ setStartOptions([], ""); hintEl.textContent = "Bitte Datum im Kalender auswählen."; updateCtas(); return; }
+    if(!dateISO){ setStartOptions([], ""); updateCtas(); return; }
     try{
       const sunset = await getSunsetLocal(dateISO);
       const previouslySelected = startEl.value;
@@ -719,11 +736,6 @@
       const filtered = filterByBookings(dateISO, duration, allowed);
       setStartOptions(filtered, previouslySelected);
       sunsetPillEl.textContent = `Sonnenuntergang: ca. ${sunset.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr`;
-      if(filtered.length === 0){
-        hintEl.textContent = `An diesem Tag ist keine Startzeit mehr verfügbar.`;
-      } else {
-        hintEl.textContent = `Letzter möglicher Start: ${new Date(lastStartTsHour).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr.`;
-      }
       updateCtas();
     } catch(e){ setStartOptions([], ""); updateCtas(); }
   }
@@ -869,7 +881,7 @@
       btn.addEventListener("click", async () => {
         calSelectedISO = dayISO; dateEl.value = dayISO; await refresh();
         startEl.value = fmtTime(h); updateCtas();
-        pkgEl?.scrollIntoView({behavior:"smooth", block:"center"});
+        // Hier scrollen wir sanft nicht mehr komplett runter, sondern bleiben im Flow
       });
       calSlotsEl.appendChild(btn);
     });
