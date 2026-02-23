@@ -510,7 +510,7 @@
       <input type="checkbox" id="privacy" required />
       <label for="privacy">
         Ich stimme zu, dass meine Angaben erhoben und verarbeitet werden. 
-        Details siehe <a href="https://warnowmoments.de/datenschutz" target="_blank" rel="noopener">Datenschutzerklärung</a>.
+        Details siehe <a href="https://warnowmoments.de/datenschutzerklaerung" target="_blank" rel="noopener">Datenschutzerklärung</a>.
       </label>
     </div>
 
@@ -664,7 +664,7 @@
     } catch(e){ holidayByYear.set(year, new Map()); }
   }
 
-  // --- NEU: Lokale, hochpräzise astronomische Berechnung (Sicher, schnell, immer verfügbar!) ---
+  // --- Lokale, hochpräzise astronomische Berechnung (Sicher, schnell, immer verfügbar!) ---
   function getSunsetRostock(dateISO) {
     const d = new Date(dateISO + "T12:00:00Z");
     const startOfYear = new Date(Date.UTC(d.getUTCFullYear(), 0, 0));
