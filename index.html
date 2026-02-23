@@ -231,9 +231,7 @@
       transform: scale(1.02);
     }
     
-    /* NEU: Visuelle Zustände für die Auslastung */
     .cal-cell.partially-booked {
-      /* Diagonaler "halb voll" Effekt */
       background: linear-gradient(135deg, #ffffff 55%, #f1f5f9 55%);
     }
     .cal-cell.partially-booked:hover:not([disabled]) {
@@ -241,7 +239,6 @@
     }
 
     .cal-cell.fully-booked {
-      /* Komplett Hellgrau */
       background: #f1f5f9;
       color: var(--c-muted);
     }
@@ -249,7 +246,6 @@
       background: #e2e8f0;
     }
 
-    /* Selected überschreibt alles */
     .cal-cell.selected {
       background: var(--c-primary) !important;
       color: #fff !important;
@@ -444,16 +440,13 @@
       </div>
     </div>
 
-    <div style="display:none;">
-      <select id="start" required></select>
-    </div>
+    <div style="display:none;"><select id="start" required></select></div>
 
     <div style="margin-top: 24px;">
       <h3 style="margin:0 0 12px;font-size:16px;">Tagesbelegung & Startzeiten</h3>
       
       <div class="tl-wrap" id="cal-timeline-wrap" style="display:none; margin-top: 0; margin-bottom: 12px;">
         <div class="tl-scale" id="cal-timeline-scale"></div>
-
         <div class="tl-bar" id="cal-timeline-bar" aria-label="Belegungen als Zeitleiste">
           <div class="tl-tip" id="tl-tip" role="dialog" aria-modal="false" aria-label="Belegungsdetails">
             <button class="t-close" type="button" id="tl-tip-close" aria-label="Schließen">×</button>
@@ -462,7 +455,6 @@
             <div class="t-row" id="tl-tip-dur">–</div>
           </div>
         </div>
-
         <div class="tl-legend">
           <span><span class="tl-dot conf"></span>Gebucht</span>
           <span><span class="tl-dot res"></span>Reserviert</span>
@@ -472,7 +464,6 @@
       <div id="cal-blocks" style="margin-bottom: 16px;"></div>
 
       <p class="muted" id="cal-day-title" style="margin:0 0 8px; font-weight: bold;"></p>
-      
       <div id="cal-slots" class="row" style="flex-wrap:wrap;gap:8px;"></div>
     </div>
 
@@ -673,12 +664,32 @@
     } catch(e){ holidayByYear.set(year, new Map()); }
   }
 
-  async function getSunsetLocal(dateISO){
-    const res = await fetch(`https://api.sunrise-sunset.org/json?lat=${LAT}&lng=${LNG}&date=${dateISO}&formatted=0`);
-    if (!res.ok) throw new Error();
-    const data = await res.json();
-    if (!data || data.status !== "OK") throw new Error();
-    return new Date(data.results.sunset);
+  // --- NEU: Lokale, hochpräzise astronomische Berechnung (Sicher, schnell, immer verfügbar!) ---
+  function getSunsetRostock(dateISO) {
+    const d = new Date(dateISO + "T12:00:00Z");
+    const startOfYear = new Date(Date.UTC(d.getUTCFullYear(), 0, 0));
+    const diff = d - startOfYear;
+    const dayOfYear = Math.floor(diff / 86400000);
+
+    const lat = 54.0924;
+    const lng = 12.0991;
+
+    // NOAA Solar Calculations
+    const gamma = (2 * Math.PI / 365) * (dayOfYear - 1 + (12 - 12) / 24);
+    const eqTime = 229.18 * (0.000075 + 0.001868 * Math.cos(gamma) - 0.032077 * Math.sin(gamma) - 0.014615 * Math.cos(2 * gamma) - 0.040849 * Math.sin(2 * gamma));
+    const decl = 0.006918 - 0.399912 * Math.cos(gamma) + 0.070257 * Math.sin(gamma) - 0.006758 * Math.cos(2 * gamma) + 0.000907 * Math.sin(2 * gamma) - 0.002697 * Math.cos(3 * gamma) + 0.00148 * Math.sin(3 * gamma);
+
+    const zenith = 90.833 * (Math.PI / 180);
+    const latRad = lat * (Math.PI / 180);
+    let haArg = (Math.cos(zenith) - (Math.sin(latRad) * Math.sin(decl))) / (Math.cos(latRad) * Math.cos(decl));
+    haArg = Math.max(-1, Math.min(1, haArg));
+    const ha = Math.acos(haArg);
+
+    const sunsetUTCMinutes = 720 - 4 * lng - eqTime + (ha * 180 / Math.PI) * 4;
+
+    const sunsetDate = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0));
+    sunsetDate.setUTCMinutes(sunsetUTCMinutes);
+    return sunsetDate;
   }
 
   function floorToFullHour(ts){
@@ -783,9 +794,9 @@
     const dateISO = dateEl.value; const duration = Number(pkgEl.value);
     if(!dateISO){ setStartOptions([], ""); updateCtas(); return; }
     try{
-      const sunset = await getSunsetLocal(dateISO);
+      const sunset = getSunsetRostock(dateISO); // Nutzt jetzt die lokale Formel
       const previouslySelected = startEl.value;
-      const { allowed, lastStartTsHour } = computeAllowedStartHours(dateISO, sunset, duration);
+      const { allowed } = computeAllowedStartHours(dateISO, sunset, duration);
       const filtered = filterByBookings(dateISO, duration, allowed);
       setStartOptions(filtered, previouslySelected);
       sunsetPillEl.textContent = `Sonnenuntergang: ca. ${sunset.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr`;
@@ -947,7 +958,7 @@
     calDayTitleEl.textContent = `Wähle eine freie Startzeit:`;
     calSlotsEl.innerHTML = "";
     try{
-      const sunset = await getSunsetLocal(dayISO);
+      const sunset = getSunsetRostock(dayISO); // Exakte Berechnung nutzen
       const duration = Number(pkgEl.value);
       const { allowed } = computeAllowedStartHours(dayISO, sunset, duration);
       buildSlotButtons(dayISO, filterByBookings(dayISO, duration, allowed));
@@ -980,10 +991,11 @@
       
       const { reserved, confirmed } = countBlocksOnDay(iso);
       
-      // Schneller Verfügbarkeits-Check (ignorieren wir hier einmal kurz den exakten Sonnenuntergang für die Farbe)
-      const allowedHours = [];
-      for(let h=HOURS_MIN; h<=HOURS_MAX; h++) allowedHours.push(h);
-      const freeSlots = filterByBookings(iso, duration, allowedHours);
+      // Nutze die absolut genaue astronomische Formel für die Kalender-Einfärbung!
+      const exactSunset = getSunsetRostock(iso);
+      const { allowed } = computeAllowedStartHours(iso, exactSunset, duration);
+      const freeSlots = filterByBookings(iso, duration, allowed);
+      
       const isFullyBooked = freeSlots.length === 0;
       const isPartiallyBooked = !isFullyBooked && (reserved > 0 || confirmed > 0);
 
@@ -1021,9 +1033,8 @@
     calSelectedISO = todayISO; await renderCalendar(); dateEl.value = todayISO; await refresh(); showDaySlots(todayISO);
   });
   
-  // Wenn das Paket geändert wird, berechnet sich der Kalender (Farben) sofort neu!
   pkgEl?.addEventListener("change", async () => { 
-    await renderCalendar(); // Aktualisiert die Farben (halb voll / ausgebucht)
+    await renderCalendar(); 
     await refresh(); 
     if(calSelectedISO) showDaySlots(calSelectedISO); 
   });
@@ -1031,7 +1042,13 @@
   ctaEl?.addEventListener("click", submitReservation);
   tipCloseEl?.addEventListener("click", tipClose);
 
-  // Initialisierung
+  let resizeTimeout;
+  function wmPostHeight(){
+    const h = Math.max(document.documentElement.scrollHeight, document.body?.scrollHeight || 0, document.documentElement.offsetHeight, document.body?.offsetHeight || 0);
+    window.parent?.postMessage({ type: "wm-iframe-height", height: h }, "https://warnowmoments.de");
+    window.parent?.postMessage({ type: "wm-iframe-height", height: h }, "https://www.warnowmoments.de");
+  }
+
   async function init(){
     try {
       await setTodayDate();
@@ -1040,6 +1057,12 @@
       
       await Promise.all([ loadPublicCalendar(), loadHolidaysForYear(new Date().getFullYear()) ]);
       await renderCalendar(); await refresh(); if(calSelectedISO) showDaySlots(calSelectedISO); updateCtas();
+
+      if ("ResizeObserver" in window) {
+        const ro = new ResizeObserver(() => { clearTimeout(resizeTimeout); resizeTimeout = setTimeout(wmPostHeight, 50); });
+        ro.observe(document.documentElement);
+      }
+      wmPostHeight();
     } catch(e) { setError("Initialisierung fehlgeschlagen. Bitte Seite neu laden."); }
   }
 
