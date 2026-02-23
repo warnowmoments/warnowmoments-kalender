@@ -27,8 +27,9 @@
       --c-primary: #1d334a;
       --c-error: #b91c1c;
 
-      --c-res: #ef6c00;
-      --c-conf: #1b5e20;
+      /* NEU: Logische und edle Farben für die Belegung */
+      --c-res: #d97706;  /* Bernstein/Orange für Reserviert */
+      --c-conf: #64748b; /* Schiefergrau für Gebucht (neutral, "vergeben") */
 
       --radius: 24px; 
       --radius-btn: 999px; 
@@ -44,7 +45,7 @@
       color: var(--c-text);
       margin:0;
       padding:16px;
-      max-width: 100%; /* Nimmt jetzt die volle Breite von Squarespace ein */
+      max-width: 100%; 
       margin-left: auto;
       margin-right: auto;
       overflow-x: hidden; 
@@ -139,7 +140,6 @@
       .grid-2col { grid-template-columns: 1fr 1fr; }
     }
 
-    /* KORREKTUR: Buttons haben wieder automatische Breite, damit sie nebeneinander passen */
     .btn, .btn2{
       display:inline-block;
       padding:12px 24px;
@@ -159,7 +159,6 @@
     .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
     .btn{ background: var(--c-primary); color:#fff; }
 
-    /* Nur die ganz großen Abschluss-Buttons im Formular bekommen 100% Breite */
     .btn-full { width: 100%; text-align: center; display: block; }
 
     .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
