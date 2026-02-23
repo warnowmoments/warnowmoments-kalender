@@ -27,9 +27,8 @@
       --c-primary: #1d334a;
       --c-error: #b91c1c;
 
-      /* NEU: Logische und edle Farben für die Belegung */
       --c-res: #d97706;  /* Bernstein/Orange für Reserviert */
-      --c-conf: #64748b; /* Schiefergrau für Gebucht (neutral, "vergeben") */
+      --c-conf: #64748b; /* Schiefergrau für Gebucht */
 
       --radius: 24px; 
       --radius-btn: 999px; 
@@ -158,6 +157,29 @@
     .btn2:hover { background: #f8fafc; transform: translateY(-1px); }
     .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
     .btn{ background: var(--c-primary); color:#fff; }
+
+    /* NEU: Styling für die anklickbaren Uhrzeiten */
+    .btn-slot {
+      display:inline-block;
+      padding:10px 18px;
+      border-radius: 999px;
+      border:1px solid var(--c-primary);
+      text-decoration:none;
+      font-weight: var(--fw-strong);
+      font-size: var(--fs-ui);
+      line-height: 1.2;
+      cursor:pointer;
+      background:#fff;
+      color: var(--c-primary);
+      transition: all 0.2s;
+    }
+    .btn-slot:hover { background: #f8fafc; transform: translateY(-1px); }
+    .btn-slot.selected-slot {
+      background: var(--c-primary);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(29,51,74,.25);
+      border-color: var(--c-primary);
+    }
 
     .btn-full { width: 100%; text-align: center; display: block; }
 
@@ -380,34 +402,11 @@
     </div>
     
     <div class="pill" id="cal-title" style="margin-bottom: 16px; display: inline-block;">–</div>
-
     <div id="cal-grid"></div>
-
-    <div class="tl-wrap" id="cal-timeline-wrap" style="display:none">
-      <p class="muted" style="margin:0 0 12px 0; font-weight: bold;">Tagesbelegung (Zeitleiste):</p>
-      <div class="tl-scale" id="cal-timeline-scale"></div>
-
-      <div class="tl-bar" id="cal-timeline-bar" aria-label="Belegungen als Zeitleiste">
-        <div class="tl-tip" id="tl-tip" role="dialog" aria-modal="false" aria-label="Belegungsdetails">
-          <button class="t-close" type="button" id="tl-tip-close" aria-label="Schließen">×</button>
-          <div class="t-title" id="tl-tip-title">–</div>
-          <div class="t-row" id="tl-tip-time">–</div>
-          <div class="t-row" id="tl-tip-dur">–</div>
-        </div>
-      </div>
-
-      <div class="tl-legend">
-        <span><span class="tl-dot conf"></span>Gebucht</span>
-        <span><span class="tl-dot res"></span>Reserviert</span>
-      </div>
-    </div>
-
-    <p class="muted" id="cal-blocks-title" style="margin-top:20px"></p>
-    <div id="cal-blocks" style="margin-top:8px"></div>
   </div>
 
   <div class="card" style="margin: 0; align-self: start;">
-    <h2 style="margin:0 0 20px;font-size:22px;line-height:1.2; letter-spacing: -0.02em;">2. Details & Startzeit</h2>
+    <h2 style="margin:0 0 20px;font-size:22px;line-height:1.2; letter-spacing: -0.02em;">2. Details & Zeit</h2>
     
     <div class="grid grid-2col">
       <div>
@@ -425,13 +424,37 @@
       </div>
     </div>
 
-    <div style="margin-top: 16px;">
-      <label for="start">Startzeit (volle Stunde)</label>
+    <div style="display:none;">
       <select id="start" required></select>
     </div>
 
-    <p class="muted" id="cal-day-title" style="margin-top:16px"></p>
-    <div id="cal-slots" class="row" style="margin-top:8px;flex-wrap:wrap;gap:8px;"></div>
+    <div style="margin-top: 24px;">
+      <h3 style="margin:0 0 12px;font-size:16px;">Tagesbelegung & Startzeiten</h3>
+      
+      <div class="tl-wrap" id="cal-timeline-wrap" style="display:none; margin-top: 0; margin-bottom: 12px;">
+        <div class="tl-scale" id="cal-timeline-scale"></div>
+
+        <div class="tl-bar" id="cal-timeline-bar" aria-label="Belegungen als Zeitleiste">
+          <div class="tl-tip" id="tl-tip" role="dialog" aria-modal="false" aria-label="Belegungsdetails">
+            <button class="t-close" type="button" id="tl-tip-close" aria-label="Schließen">×</button>
+            <div class="t-title" id="tl-tip-title">–</div>
+            <div class="t-row" id="tl-tip-time">–</div>
+            <div class="t-row" id="tl-tip-dur">–</div>
+          </div>
+        </div>
+
+        <div class="tl-legend">
+          <span><span class="tl-dot conf"></span>Gebucht</span>
+          <span><span class="tl-dot res"></span>Reserviert</span>
+        </div>
+      </div>
+
+      <div id="cal-blocks" style="margin-bottom: 16px;"></div>
+
+      <p class="muted" id="cal-day-title" style="margin:0 0 8px; font-weight: bold;"></p>
+      
+      <div id="cal-slots" class="row" style="flex-wrap:wrap;gap:8px;"></div>
+    </div>
 
     <div class="kv" style="margin-top: 20px;">
       <span class="pill" id="selected-pill">Auswahl: –</span>
@@ -537,7 +560,6 @@
   const calGridEl = document.getElementById("cal-grid");
   const calDayTitleEl = document.getElementById("cal-day-title");
   const calSlotsEl = document.getElementById("cal-slots");
-  const calBlocksTitleEl = document.getElementById("cal-blocks-title");
   const calBlocksEl = document.getElementById("cal-blocks");
 
   const tlWrapEl = document.getElementById("cal-timeline-wrap");
@@ -676,6 +698,19 @@
     return ok;
   }
 
+  // --- NEU: Diese Funktion kümmert sich um die farbliche Markierung des geklickten Zeit-Buttons ---
+  function updateSlotButtonVisuals() {
+    const current = startEl.value;
+    if(!calSlotsEl) return;
+    Array.from(calSlotsEl.children).forEach(btn => {
+      if(btn.textContent === current) {
+        btn.classList.add("selected-slot");
+      } else {
+        btn.classList.remove("selected-slot");
+      }
+    });
+  }
+
   function setStartOptions(hours, preferredValue){
     startEl.innerHTML = "";
     if(!hours.length){
@@ -684,11 +719,10 @@
       opt.textContent = "Keine Startzeit verfügbar";
       startEl.appendChild(opt);
       startEl.disabled = true;
-      startEl.classList.add("input-error");
+      updateSlotButtonVisuals();
       return;
     }
     startEl.disabled = false;
-    startEl.classList.remove("input-error");
     for(const h of hours){
       const v = fmtTime(h);
       const opt = document.createElement("option");
@@ -698,6 +732,7 @@
     }
     const canUsePreferred = preferredValue && [...startEl.options].some(o => o.value === preferredValue);
     startEl.value = canUsePreferred ? preferredValue : startEl.options[0].value;
+    updateSlotButtonVisuals();
   }
 
   function updateCtas(){
@@ -741,7 +776,7 @@
 
   function validateRequiredFields(){
     let isValid = true; let firstErrorEl = null;
-    [nameEl, emailEl, phoneEl, dateEl, pkgEl, startEl].forEach(el => { if(el) el.classList.remove("input-error"); });
+    [nameEl, emailEl, phoneEl, dateEl, pkgEl].forEach(el => { if(el) el.classList.remove("input-error"); });
     privacyEl.style.outline = "none";
 
     const checkField = (el, condition, msg) => {
@@ -759,8 +794,7 @@
     checkField(dateEl, dateEl.value !== "", "Bitte ein Datum im Kalender auswählen.");
     
     if(startEl && startEl.disabled) {
-      startEl.classList.add("input-error");
-      if(!firstErrorEl) { firstErrorEl = startEl; setError("Bitte Datum/Paket so wählen, dass eine Startzeit verfügbar ist."); }
+      if(!firstErrorEl) { firstErrorEl = pkgEl; setError("An diesem Tag ist leider keine Zeit für das Paket mehr frei."); }
       isValid = false;
     }
 
@@ -814,10 +848,9 @@
   function renderBlocksList(dayISO){
     const blocks = getBlocksForDay(dayISO);
     calBlocksEl.innerHTML = "";
-    if(!blocks.length){ calBlocksTitleEl.textContent = ""; return; }
-    calBlocksTitleEl.textContent = "Belegungen an diesem Tag:";
+    if(!blocks.length){ return; }
     for(const b of blocks){
-      const row = document.createElement("div"); row.className = "muted"; row.style.fontWeight = "800"; row.style.marginTop = "6px";
+      const row = document.createElement("div"); row.className = "muted"; row.style.fontWeight = "800"; row.style.marginTop = "6px"; row.style.fontSize = "13px";
       const label = b.status === "confirmed" ? "Gebucht" : "Reserviert";
       const allDay = isAllDayLike(b.startMs, b.endMs);
       const dur = fmtDuration(b.endMs - b.startMs);
@@ -873,20 +906,26 @@
   function buildSlotButtons(dayISO, hours){
     calSlotsEl.innerHTML = "";
     if(!hours.length){
-      const span = document.createElement("span"); span.className = "muted"; span.textContent = "An diesem Tag sind keine Startzeiten mehr verfügbar."; calSlotsEl.appendChild(span); return;
+      const span = document.createElement("span"); span.className = "muted"; span.textContent = "Leider keine Zeiten mehr für dieses Paket frei."; calSlotsEl.appendChild(span); return;
     }
     hours.forEach(h => {
-      const btn = document.createElement("button"); btn.type = "button"; btn.className = "btn2"; btn.textContent = fmtTime(h);
-      btn.addEventListener("click", async () => {
-        calSelectedISO = dayISO; dateEl.value = dayISO; await refresh();
-        startEl.value = fmtTime(h); updateCtas();
+      const btn = document.createElement("button"); 
+      btn.type = "button"; 
+      btn.className = "btn-slot"; 
+      btn.textContent = fmtTime(h);
+      btn.addEventListener("click", () => {
+        startEl.value = fmtTime(h); 
+        updateSlotButtonVisuals();
+        updateCtas();
+        if(errEl.style.display === "block") setError(""); // Entfernt Fehlermeldung, falls vorhanden
       });
       calSlotsEl.appendChild(btn);
     });
+    updateSlotButtonVisuals();
   }
 
   async function showDaySlots(dayISO){
-    calDayTitleEl.textContent = `Wähle eine freie Startzeit am ${dayISO}:`;
+    calDayTitleEl.textContent = `Wähle eine freie Startzeit:`;
     calSlotsEl.innerHTML = "";
     try{
       const sunset = await getSunsetLocal(dayISO);
