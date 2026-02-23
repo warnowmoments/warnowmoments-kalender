@@ -158,7 +158,6 @@
     .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
     .btn{ background: var(--c-primary); color:#fff; }
 
-    /* NEU: Styling für die anklickbaren Uhrzeiten */
     .btn-slot {
       display:inline-block;
       padding:10px 18px;
@@ -212,6 +211,7 @@
       grid-template-columns: repeat(7, minmax(0, 1fr));
       gap: 6px; 
     }
+    
     .cal-cell {
       display: flex;
       flex-direction: column;
@@ -230,6 +230,26 @@
       border-color: #cbd5e1;
       transform: scale(1.02);
     }
+    
+    /* NEU: Visuelle Zustände für die Auslastung */
+    .cal-cell.partially-booked {
+      /* Diagonaler "halb voll" Effekt */
+      background: linear-gradient(135deg, #ffffff 55%, #f1f5f9 55%);
+    }
+    .cal-cell.partially-booked:hover:not([disabled]) {
+      background: linear-gradient(135deg, #f8fafc 55%, #e2e8f0 55%);
+    }
+
+    .cal-cell.fully-booked {
+      /* Komplett Hellgrau */
+      background: #f1f5f9;
+      color: var(--c-muted);
+    }
+    .cal-cell.fully-booked:hover:not([disabled]) {
+      background: #e2e8f0;
+    }
+
+    /* Selected überschreibt alles */
     .cal-cell.selected {
       background: var(--c-primary) !important;
       color: #fff !important;
@@ -698,7 +718,6 @@
     return ok;
   }
 
-  // --- NEU: Diese Funktion kümmert sich um die farbliche Markierung des geklickten Zeit-Buttons ---
   function updateSlotButtonVisuals() {
     const current = startEl.value;
     if(!calSlotsEl) return;
@@ -906,7 +925,7 @@
   function buildSlotButtons(dayISO, hours){
     calSlotsEl.innerHTML = "";
     if(!hours.length){
-      const span = document.createElement("span"); span.className = "muted"; span.textContent = "Leider keine Zeiten mehr für dieses Paket frei."; calSlotsEl.appendChild(span); return;
+      const span = document.createElement("span"); span.className = "muted"; span.textContent = "Leider keine Startzeiten mehr für dieses Paket frei."; calSlotsEl.appendChild(span); return;
     }
     hours.forEach(h => {
       const btn = document.createElement("button"); 
@@ -917,7 +936,7 @@
         startEl.value = fmtTime(h); 
         updateSlotButtonVisuals();
         updateCtas();
-        if(errEl.style.display === "block") setError(""); // Entfernt Fehlermeldung, falls vorhanden
+        if(errEl.style.display === "block") setError(""); 
       });
       calSlotsEl.appendChild(btn);
     });
@@ -947,6 +966,7 @@
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const todayMs = new Date(new Date().setHours(0,0,0,0)).getTime();
     const todayISO = await getTodayISO();
+    const duration = Number(pkgEl.value);
     
     calGridEl.innerHTML = "";
     ["Mo","Di","Mi","Do","Fr","Sa","So"].forEach(d => {
@@ -958,7 +978,22 @@
       const iso = calToISODate(d), isPast = d.getTime() < todayMs;
       const cell = document.createElement("button"); cell.type = "button"; cell.className = "cal-cell";
       
-      if(isPast) cell.setAttribute("disabled", "true");
+      const { reserved, confirmed } = countBlocksOnDay(iso);
+      
+      // Schneller Verfügbarkeits-Check (ignorieren wir hier einmal kurz den exakten Sonnenuntergang für die Farbe)
+      const allowedHours = [];
+      for(let h=HOURS_MIN; h<=HOURS_MAX; h++) allowedHours.push(h);
+      const freeSlots = filterByBookings(iso, duration, allowedHours);
+      const isFullyBooked = freeSlots.length === 0;
+      const isPartiallyBooked = !isFullyBooked && (reserved > 0 || confirmed > 0);
+
+      if(isPast) {
+        cell.setAttribute("disabled", "true");
+      } else {
+        if(isFullyBooked) cell.classList.add("fully-booked");
+        else if(isPartiallyBooked) cell.classList.add("partially-booked");
+      }
+
       if(iso === todayISO) cell.classList.add("today");
       if(calSelectedISO === iso) cell.classList.add("selected");
       
@@ -966,7 +1001,6 @@
       const hol = holidayMap.get(iso);
       if(hol){ const hEl = document.createElement("div"); hEl.className = "holiday-label"; hEl.textContent = hol; cell.appendChild(hEl); cell.title = hol; }
       
-      const { reserved, confirmed } = countBlocksOnDay(iso);
       if(reserved || confirmed){
         const badge = document.createElement("div"); badge.className = "cal-badge";
         const parts = []; if(confirmed) parts.push(`${confirmed} geb.`); if(reserved) parts.push(`${reserved} res.`);
@@ -986,7 +1020,13 @@
     const todayISO = await getTodayISO(); calCursor = new Date(todayISO + "T00:00:00"); calCursor.setDate(1); calCursor.setHours(0,0,0,0);
     calSelectedISO = todayISO; await renderCalendar(); dateEl.value = todayISO; await refresh(); showDaySlots(todayISO);
   });
-  pkgEl?.addEventListener("change", async () => { await refresh(); if(calSelectedISO) showDaySlots(calSelectedISO); });
+  
+  // Wenn das Paket geändert wird, berechnet sich der Kalender (Farben) sofort neu!
+  pkgEl?.addEventListener("change", async () => { 
+    await renderCalendar(); // Aktualisiert die Farben (halb voll / ausgebucht)
+    await refresh(); 
+    if(calSelectedISO) showDaySlots(calSelectedISO); 
+  });
   
   ctaEl?.addEventListener("click", submitReservation);
   tipCloseEl?.addEventListener("click", tipClose);
