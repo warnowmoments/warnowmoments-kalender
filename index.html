@@ -44,22 +44,21 @@
       color: var(--c-text);
       margin:0;
       padding:16px;
-      max-width: 1200px; /* Etwas breiter für das Zwei-Spalten-Layout */
+      max-width: 100%; /* Nimmt jetzt die volle Breite von Squarespace ein */
       margin-left: auto;
       margin-right: auto;
       overflow-x: hidden; 
     }
 
-    /* NEU: Das Zwei-Spalten-Layout */
     .dashboard-layout {
       display: grid;
-      grid-template-columns: 1fr; /* Auf Handys: Untereinander */
+      grid-template-columns: 1fr; 
       gap: 24px;
       align-items: start;
     }
     @media (min-width: 900px) {
       .dashboard-layout {
-        grid-template-columns: 1fr 1fr; /* Auf PC: Nebeneinander (50/50) */
+        grid-template-columns: 1fr 1fr; 
       }
     }
 
@@ -130,7 +129,6 @@
       border-radius: 20px;
     }
 
-    /* Im Formular können wir es bei 2 Feldern nebeneinander belassen, da die Spalte schmaler wird */
     .grid{
       display:grid;
       grid-template-columns: 1fr;
@@ -141,6 +139,7 @@
       .grid-2col { grid-template-columns: 1fr 1fr; }
     }
 
+    /* KORREKTUR: Buttons haben wieder automatische Breite, damit sie nebeneinander passen */
     .btn, .btn2{
       display:inline-block;
       padding:12px 24px;
@@ -158,8 +157,10 @@
     .btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(29,51,74,.15); }
     .btn2:hover { background: #f8fafc; transform: translateY(-1px); }
     .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
-    .btn{ background: var(--c-primary); color:#fff; width: 100%; text-align: center; } /* Button füllt Spalte */
-    .btn2 { width: 100%; text-align: center; }
+    .btn{ background: var(--c-primary); color:#fff; }
+
+    /* Nur die ganz großen Abschluss-Buttons im Formular bekommen 100% Breite */
+    .btn-full { width: 100%; text-align: center; display: block; }
 
     .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 
@@ -185,7 +186,6 @@
     }
     .kv{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
 
-    /* KALENDER-DESIGN: Wieder kompakt, aber mit runden Ecken */
     #cal-grid {
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -197,9 +197,9 @@
       align-items: center;
       justify-content: center;
       width: 100%;
-      min-height: 64px; /* Flachere Höhe wie früher */
+      min-height: 64px; 
       border: 1px solid var(--c-border);
-      border-radius: 14px; /* Weiche Ecken, aber rechteckig */
+      border-radius: 14px; 
       background: #fff;
       transition: all 0.2s ease;
       padding: 6px 2px;
@@ -432,7 +432,7 @@
     </div>
 
     <p class="muted" id="cal-day-title" style="margin-top:16px"></p>
-    <div id="cal-slots" class="row" style="margin-top:8px;flex-wrap:wrap"></div>
+    <div id="cal-slots" class="row" style="margin-top:8px;flex-wrap:wrap;gap:8px;"></div>
 
     <div class="kv" style="margin-top: 20px;">
       <span class="pill" id="selected-pill">Auswahl: –</span>
@@ -483,10 +483,10 @@
 
     <div class="grid grid-2col" style="margin-top: 28px; gap: 12px;">
       <div>
-        <button class="btn" id="cta" type="button">Anfragen</button>
+        <button class="btn btn-full" id="cta" type="button">Anfragen</button>
       </div>
       <div>
-        <a class="btn2" id="cta2" href="https://warnowmoments.de/contact" target="_blank" rel="noopener">
+        <a class="btn2 btn-full" id="cta2" href="https://warnowmoments.de/contact" target="_blank" rel="noopener">
           Kontakt aufnehmen
         </a>
       </div>
@@ -881,7 +881,6 @@
       btn.addEventListener("click", async () => {
         calSelectedISO = dayISO; dateEl.value = dayISO; await refresh();
         startEl.value = fmtTime(h); updateCtas();
-        // Hier scrollen wir sanft nicht mehr komplett runter, sondern bleiben im Flow
       });
       calSlotsEl.appendChild(btn);
     });
@@ -954,13 +953,7 @@
   ctaEl?.addEventListener("click", submitReservation);
   tipCloseEl?.addEventListener("click", tipClose);
 
-  let resizeTimeout;
-  function wmPostHeight(){
-    const h = Math.max(document.documentElement.scrollHeight, document.body?.scrollHeight || 0, document.documentElement.offsetHeight, document.body?.offsetHeight || 0);
-    window.parent?.postMessage({ type: "wm-iframe-height", height: h }, "https://warnowmoments.de");
-    window.parent?.postMessage({ type: "wm-iframe-height", height: h }, "https://www.warnowmoments.de");
-  }
-
+  // Initialisierung
   async function init(){
     try {
       await setTodayDate();
@@ -969,12 +962,6 @@
       
       await Promise.all([ loadPublicCalendar(), loadHolidaysForYear(new Date().getFullYear()) ]);
       await renderCalendar(); await refresh(); if(calSelectedISO) showDaySlots(calSelectedISO); updateCtas();
-      
-      if ("ResizeObserver" in window) {
-        const ro = new ResizeObserver(() => { clearTimeout(resizeTimeout); resizeTimeout = setTimeout(wmPostHeight, 50); });
-        ro.observe(document.documentElement);
-      }
-      wmPostHeight();
     } catch(e) { setError("Initialisierung fehlgeschlagen. Bitte Seite neu laden."); }
   }
 
