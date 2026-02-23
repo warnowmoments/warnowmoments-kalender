@@ -78,9 +78,8 @@
 
     select,input[type="text"],input[type="email"],input[type="tel"],input[type="date"],button,textarea{ font: inherit; }
 
-    /* HIER IST DER FIX FÜR DAS HANDY EINGEBAUT */
+    /* --- HIER IST DER FIX FÜR DIE EINHEITLICHEN HÖHEN --- */
     select,input[type="text"],input[type="email"],input[type="tel"],input[type="date"],textarea{
-      padding:14px 16px; 
       width:100%; 
       max-width:100%; 
       font-size: var(--fs-ui); 
@@ -92,18 +91,32 @@
       min-width: 0 !important; 
     }
     
-    /* Nimmt dem Datum das native Safari-Design, das für den Ausbruch sorgt */
+    /* Alle einzeiligen Felder sind exakt 54px hoch, der Text ist perfekt mittig */
+    select, input[type="text"], input[type="email"], input[type="tel"], input[type="date"] {
+      height: 54px;
+      padding: 0 16px;
+    }
+
+    /* Das Textfeld für die Nachricht bekommt seine eigene Höhe */
+    textarea { 
+      min-height: 110px; 
+      resize: vertical; 
+      border-radius: 20px; 
+      padding: 14px 16px;
+    }
+    
+    /* Nimmt dem Datum das native Safari-Design, das für den Handy-Ausbruch sorgte */
     input[type="date"] {
       -webkit-appearance: none;
       appearance: none;
     }
+    /* ---------------------------------------------------- */
     
     select:focus,input:focus,textarea:focus { outline: none; border-color: var(--c-primary); box-shadow: 0 0 0 4px rgba(29,51,74,.08); }
     .input-error { border-color: var(--c-error) !important; background-color: #fef2f2 !important; }
 
     select:disabled, input:disabled, textarea:disabled{ background: #f8fafc; color: #6b7280; cursor: not-allowed; }
     input[type="date"][readonly] { background: #f3f4f6; color: var(--c-primary); font-weight: var(--fw-strong); pointer-events: none; }
-    textarea{ min-height: 110px; resize: vertical; border-radius: 20px; }
 
     /* Fix für Grid auf iOS */
     .grid{ display:grid; grid-template-columns: 1fr; gap:16px; align-items:end; }
@@ -796,7 +809,7 @@
   ctaEl?.addEventListener("click", submitReservation);
   tipCloseEl?.addEventListener("click", tipClose);
 
-  // Der Messenger, der die Höhe an Squarespace funkt!
+  // Der Messenger, der die Höhe an Squarespace funkt
   let resizeTimeout;
   function wmPostHeight(){
     const h = Math.max(
