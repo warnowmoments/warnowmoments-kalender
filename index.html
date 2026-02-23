@@ -30,9 +30,10 @@
       --c-res: #ef6c00;
       --c-conf: #1b5e20;
 
-      --radius: 12px;
-      --radius-btn: 10px;
-      --pad: 14px;
+      /* NEU: Viel weichere, besondere Rundungen */
+      --radius: 24px; 
+      --radius-btn: 999px; /* Pill-Shape für Buttons */
+      --pad: 24px; 
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -45,12 +46,11 @@
       margin:0;
       padding:16px;
       max-width:980px;
-      /* Verhindert horizontales Scrollen im iFrame */
       overflow-x: hidden; 
     }
 
     h1{
-      margin:0 0 10px;
+      margin:0 0 16px;
       font-size: var(--fs-h1);
       line-height: var(--lh-h1);
       letter-spacing: -0.02em;
@@ -60,8 +60,9 @@
       border:1px solid var(--c-border);
       border-radius: var(--radius);
       padding: var(--pad);
-      margin:10px 0;
+      margin: 16px 0;
       background: #fff;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.04); /* Etwas weicherer Schatten */
     }
 
     label{
@@ -69,6 +70,7 @@
       font-weight: var(--fw-strong);
       margin:10px 0 6px;
       font-size: var(--fs-label);
+      padding-left: 4px; /* Kleine optische Anpassung für die runden Felder */
     }
 
     select,input[type="text"],input[type="email"],input[type="tel"],input[type="date"],button,textarea{ 
@@ -76,20 +78,20 @@
     }
 
     select,input[type="text"],input[type="email"],input[type="tel"],input[type="date"],textarea{
-      padding:10px;
+      padding:14px 16px;
       width:100%;
       max-width:100%;
       font-size: var(--fs-ui);
       border: 1px solid var(--c-border);
-      border-radius: 10px;
+      border-radius: 16px; /* Schön runde Eingabefelder */
       background: #fff;
-      transition: border-color 0.2s;
+      transition: all 0.2s ease;
     }
     
-    /* Fokus und Fehler-Styling */
     select:focus,input:focus,textarea:focus {
-      outline: 2px solid var(--c-primary);
-      outline-offset: -1px;
+      outline: none;
+      border-color: var(--c-primary);
+      box-shadow: 0 0 0 4px rgba(29,51,74,.08);
     }
     .input-error {
       border-color: var(--c-error) !important;
@@ -99,17 +101,26 @@
     select:disabled, input:disabled, textarea:disabled{
       background: #f8fafc;
       color: #6b7280;
+      cursor: not-allowed;
+    }
+
+    input[type="date"][readonly] {
+      background: #f3f4f6;
+      color: var(--c-primary);
+      font-weight: var(--fw-strong);
+      pointer-events: none; 
     }
 
     textarea{
       min-height: 110px;
       resize: vertical;
+      border-radius: 20px;
     }
 
     .grid{
       display:grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
-      gap:12px;
+      gap:16px;
       align-items:end;
     }
     .grid > div{min-width:0;}
@@ -121,19 +132,21 @@
 
     .btn, .btn2{
       display:inline-block;
-      padding:10px 14px;
+      padding:12px 24px;
       border-radius: var(--radius-btn);
       border:1px solid var(--c-primary);
       text-decoration:none;
       font-weight: var(--fw-strong);
       font-size: var(--fs-ui);
-      line-height: 1.1;
+      line-height: 1.2;
       cursor:pointer;
       background:#fff;
       color: var(--c-primary);
-      transition: opacity 0.2s;
+      transition: all 0.2s;
     }
-    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(29,51,74,.15); }
+    .btn2:hover { background: #f8fafc; transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
     .btn{ background: var(--c-primary); color:#fff; }
 
     .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
@@ -151,7 +164,7 @@
     }
     .pill{
       display:inline-block;
-      padding:4px 10px;
+      padding:6px 14px;
       border-radius:999px;
       background: var(--c-bg-pill);
       font-weight: var(--fw-strong);
@@ -160,25 +173,78 @@
     }
     .kv{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
 
+    /* KALENDER-DESIGN: "Bubble"-Look */
+    #cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px; 
+    }
+    .cal-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      aspect-ratio: 1 / 1; 
+      border: 1px solid var(--c-border);
+      border-radius: 20px; /* iPhone-App Style (Squircle) */
+      background: #fff;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 4px;
+    }
+    .cal-cell:hover:not([disabled]) {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      transform: scale(1.05);
+    }
+    .cal-cell.selected {
+      background: var(--c-primary) !important;
+      color: #fff !important;
+      border-color: var(--c-primary) !important;
+      box-shadow: 0 6px 16px rgba(29,51,74,.25);
+      transform: scale(1.05);
+      z-index: 2;
+    }
+    .cal-cell.today:not(.selected) {
+      background: rgba(29,51,74,.06);
+      border-color: rgba(29,51,74,.2);
+    }
+    .cal-cell[disabled] {
+      cursor: not-allowed;
+      opacity: 0.4;
+      background: #f9fafb;
+      border-radius: 16px;
+    }
+    .cal-num {
+      font-weight: 900;
+      font-size: 16px;
+    }
     .holiday-label{
       margin-top: 2px;
-      font-size: 11px;
-      line-height: 1.15;
-      font-weight: 900;
-      color: var(--c-primary);
-      opacity: 0.95;
+      font-size: 10px;
+      line-height: 1.1;
+      font-weight: 800;
+      color: inherit; 
+      opacity: 0.8;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       max-width: 100%;
     }
+    .cal-badge {
+      margin-top: 2px;
+      font-size: 10px;
+      font-weight: 800;
+      opacity: 0.8;
+      color: inherit;
+    }
 
     .tl-wrap{
       border:1px solid var(--c-border);
-      border-radius: 12px;
-      padding:10px;
-      background:#fff;
-      margin-top:10px;
+      border-radius: 20px;
+      padding:16px;
+      background:#f8fafc;
+      margin-top:20px;
     }
     .tl-scale{
       display:flex;
@@ -187,15 +253,14 @@
       font-size:12px;
       color: var(--c-muted);
       font-weight:800;
-      margin-bottom:8px;
+      margin-bottom:10px;
     }
     .tl-bar{
       position:relative;
-      height:14px;
+      height:18px;
       border-radius:999px;
-      background: linear-gradient(90deg, #f3f4f6, #eef2f7);
+      background: linear-gradient(90deg, #e2e8f0, #cbd5e1);
       overflow:hidden;
-      border:1px solid var(--c-border);
     }
     .tl-block{
       position:absolute;
@@ -204,7 +269,9 @@
       border-radius:999px;
       opacity:0.95;
       cursor:pointer;
+      transition: transform 0.2s;
     }
+    .tl-block:hover { transform: scaleY(1.2); }
     .tl-block.res{ background: var(--c-res); }
     .tl-block.conf{ background: var(--c-conf); }
 
@@ -212,7 +279,7 @@
       display:flex;
       gap:12px;
       flex-wrap:wrap;
-      margin-top:8px;
+      margin-top:12px;
       font-size:12px;
       color: var(--c-muted);
       font-weight:800;
@@ -231,9 +298,9 @@
       max-width: 280px;
       background:#fff;
       border:1px solid var(--c-border);
-      border-radius: 12px;
+      border-radius: 16px;
       box-shadow: 0 18px 50px rgba(0,0,0,.18);
-      padding:10px 12px;
+      padding:12px 14px;
       font-size: 13px;
       line-height: 1.25;
       color: var(--c-text);
@@ -244,30 +311,39 @@
     .tl-tip .t-row{ color: var(--c-muted); font-weight: 800; }
     .tl-tip .t-close{
       position:absolute;
-      top:6px;
-      right:6px;
+      top:8px;
+      right:8px;
       border:1px solid var(--c-border);
-      background:#fff;
-      border-radius: 10px;
-      padding:4px 7px;
+      background:#f3f4f6;
+      border-radius: 999px;
+      padding:4px 8px;
       font-weight: 900;
       cursor:pointer;
       line-height:1;
+      transition: background 0.2s;
     }
+    .tl-tip .t-close:hover { background: #e5e7eb; }
     
-    /* Checkbox Styling */
     .checkbox-row {
       display: flex;
-      gap: 10px;
+      gap: 14px;
       align-items: flex-start;
       margin-top: 16px;
       margin-bottom: 8px;
+      background: #f8fafc;
+      padding: 16px;
+      border-radius: 16px;
+      transition: background 0.2s;
+    }
+    .checkbox-row:hover {
+      background: #f1f5f9;
     }
     .checkbox-row input[type="checkbox"] {
-      margin-top: 3px;
-      width: 18px;
-      height: 18px;
+      margin-top: 2px;
+      width: 22px;
+      height: 22px;
       cursor: pointer;
+      accent-color: var(--c-primary);
     }
     .checkbox-row label {
       margin: 0;
@@ -275,114 +351,32 @@
       font-size: var(--fs-muted);
       color: var(--c-text);
       cursor: pointer;
+      line-height: 1.5;
     }
     .checkbox-row a {
       color: var(--c-primary);
-      text-decoration: underline;
+      text-weight: bold;
     }
   </style>
 </head>
 <body>
 
-<h1>Verfügbarkeit & Reservierungsanfrage</h1>
-
-<div class="card">
-  <div class="grid">
-    <div>
-      <label for="date">Datum</label>
-      <input id="date" type="date" required />
-    </div>
-
-    <div>
-      <label for="package">Paket</label>
-      <select id="package" required>
-        <option value="4">Explorer‑Tour (4 Std.)</option>
-        <option value="6">Halbtags‑Cruise (6 Std.)</option>
-        <option value="8">Ganztags‑Abenteuer (8 Std.)</option>
-      </select>
-    </div>
-
-    <div>
-      <label for="start">Startzeit (volle Stunde)</label>
-      <select id="start" required></select>
+<div class="card" style="margin-top: 0;">
+  <div class="row" style="justify-content:space-between;align-items:center; margin-bottom: 20px;">
+    <h2 style="margin:0;font-size:22px;line-height:1.2; letter-spacing: -0.02em;">1. Datum wählen</h2>
+    <div class="row" style="gap: 8px;">
+      <button class="btn2" style="padding: 8px 16px;" type="button" id="cal-prev" aria-label="Vorheriger Monat">←</button>
+      <button class="btn2" style="padding: 8px 16px;" type="button" id="cal-today">Heute</button>
+      <button class="btn2" style="padding: 8px 16px;" type="button" id="cal-next" aria-label="Nächster Monat">→</button>
     </div>
   </div>
+  
+  <div class="pill" id="cal-title" style="margin-bottom: 16px; display: inline-block;">–</div>
 
-  <div class="kv">
-    <span class="pill" id="selected-pill">Auswahl: –</span>
-    <span class="muted" id="sunset-pill"></span>
-    <span class="muted" id="public-pill"></span>
-  </div>
-
-  <p class="muted" id="hint" style="margin-top:10px"></p>
-  <p class="error" id="err" style="display:none;margin-top:10px"></p>
-
-  <div class="grid" style="margin-top:10px">
-    <div>
-      <label for="name">Name</label>
-      <input id="name" type="text" autocomplete="name" placeholder="Max Mustermann" required />
-    </div>
-    <div>
-      <label for="email">E‑Mail Adresse</label>
-      <input id="email" type="email" autocomplete="email" placeholder="mail@beispiel.de" required />
-    </div>
-    <div>
-      <label for="phone">Telefonnummer</label>
-      <input id="phone" type="tel" autocomplete="tel" placeholder="0151 1234567" required />
-    </div>
-  </div>
-
-  <div style="margin-top:2px">
-    <label for="message">Nachricht</label>
-    <textarea id="message" placeholder="Optional: z.B. Teilnehmerzahl, besondere Wünsche, Rückfragen …"></textarea>
-  </div>
-
-  <div class="checkbox-row" style="margin-top: 12px;">
-    <input type="checkbox" id="copyCustomer" />
-    <label for="copyCustomer">
-      Bitte senden Sie mir eine Kopie dieser Anfrage an meine E-Mail-Adresse.
-    </label>
-  </div>
-
-  <div class="checkbox-row" style="margin-top: 8px; margin-bottom: 12px;">
-    <input type="checkbox" id="privacy" required />
-    <label for="privacy">
-      Ich stimme zu, dass meine Angaben aus dem Formular zur Beantwortung meiner Anfrage erhoben und verarbeitet werden. 
-      Details entnehmen Sie unserer <a href="https://warnowmoments.de/datenschutz" target="_blank" rel="noopener">Datenschutzerklärung</a>.
-    </label>
-  </div>
-
-  <div class="row">
-    <button class="btn" id="cta" type="button">Reservierung anfragen</button>
-    <a class="btn2" id="cta2" href="https://warnowmoments.de/contact" target="_blank" rel="noopener">
-      Kontaktformular öffnen
-    </a>
-    <span class="muted" id="cta-status" aria-live="polite"></span>
-  </div>
-
-  <p class="muted" style="margin-top:12px">
-    Hinweis: Bitte ca. 30 Minuten vor Start für Einweisung vor Ort sein. Rückgabe/Anlegen erfolgt nach der Fahrt (ca. 30 Minuten eingeplant).
-  </p>
-</div>
-
-<div class="card">
-  <h2 style="margin:0 0 10px;font-size:18px;line-height:1.2">Kalender</h2>
-
-  <div class="row" style="justify-content:space-between;align-items:center">
-    <div class="row">
-      <button class="btn2" type="button" id="cal-prev" aria-label="Vorheriger Monat">←</button>
-      <button class="btn2" type="button" id="cal-today">Heute</button>
-      <button class="btn2" type="button" id="cal-next" aria-label="Nächster Monat">→</button>
-    </div>
-    <div class="pill" id="cal-title">–</div>
-  </div>
-
-  <div id="cal-grid" style="margin-top:12px"></div>
-
-  <p class="muted" id="cal-day-title" style="margin-top:12px"></p>
-  <div id="cal-slots" class="row" style="margin-top:8px;flex-wrap:wrap"></div>
+  <div id="cal-grid"></div>
 
   <div class="tl-wrap" id="cal-timeline-wrap" style="display:none">
+    <p class="muted" style="margin:0 0 12px 0; font-weight: bold;">Tagesbelegung (Zeitleiste):</p>
     <div class="tl-scale" id="cal-timeline-scale"></div>
 
     <div class="tl-bar" id="cal-timeline-bar" aria-label="Belegungen als Zeitleiste">
@@ -400,11 +394,94 @@
     </div>
   </div>
 
-  <p class="muted" id="cal-blocks-title" style="margin-top:12px"></p>
-  <div id="cal-blocks" style="margin-top:6px"></div>
+  <p class="muted" id="cal-blocks-title" style="margin-top:20px"></p>
+  <div id="cal-blocks" style="margin-top:8px"></div>
+</div>
 
-  <p class="muted" style="margin-top:12px">
-    Tipp: Klick auf einen Tag zeigt freie Startzeiten für das ausgewählte Paket.
+<div class="card">
+  <h2 style="margin:0 0 20px;font-size:22px;line-height:1.2; letter-spacing: -0.02em;">2. Details & Startzeit</h2>
+  
+  <div class="grid">
+    <div>
+      <label for="date">Gewähltes Datum</label>
+      <input id="date" type="date" required readonly title="Bitte nutze den Kalender oben zur Auswahl" />
+    </div>
+
+    <div>
+      <label for="package">Paket</label>
+      <select id="package" required>
+        <option value="4">Explorer‑Tour (4 Std.)</option>
+        <option value="6">Halbtags‑Cruise (6 Std.)</option>
+        <option value="8">Ganztags‑Abenteuer (8 Std.)</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="start">Startzeit (volle Stunde)</label>
+      <select id="start" required></select>
+    </div>
+  </div>
+
+  <p class="muted" id="cal-day-title" style="margin-top:16px"></p>
+  <div id="cal-slots" class="row" style="margin-top:8px;flex-wrap:wrap"></div>
+
+  <div class="kv" style="margin-top: 20px;">
+    <span class="pill" id="selected-pill">Auswahl: –</span>
+    <span class="muted" id="sunset-pill"></span>
+  </div>
+
+  <p class="muted" id="hint" style="margin-top:12px"></p>
+  <p class="error" id="err" style="display:none;margin-top:12px"></p>
+
+  <hr style="border: 0; border-top: 1px solid var(--c-border); margin: 32px 0;">
+
+  <h2 style="margin:0 0 20px;font-size:22px;line-height:1.2; letter-spacing: -0.02em;">3. Kontaktdaten</h2>
+
+  <div class="grid">
+    <div>
+      <label for="name">Name</label>
+      <input id="name" type="text" autocomplete="name" placeholder="Max Mustermann" required />
+    </div>
+    <div>
+      <label for="email">E‑Mail Adresse</label>
+      <input id="email" type="email" autocomplete="email" placeholder="mail@beispiel.de" required />
+    </div>
+    <div>
+      <label for="phone">Telefonnummer</label>
+      <input id="phone" type="tel" autocomplete="tel" placeholder="0151 1234567" required />
+    </div>
+  </div>
+
+  <div style="margin-top:20px">
+    <label for="message">Nachricht</label>
+    <textarea id="message" placeholder="Optional: z.B. Teilnehmerzahl, besondere Wünsche, Rückfragen …"></textarea>
+  </div>
+
+  <div class="checkbox-row" style="margin-top: 24px;">
+    <input type="checkbox" id="copyCustomer" />
+    <label for="copyCustomer">
+      Bitte senden Sie mir eine Kopie dieser Anfrage an meine E-Mail-Adresse.
+    </label>
+  </div>
+
+  <div class="checkbox-row">
+    <input type="checkbox" id="privacy" required />
+    <label for="privacy">
+      Ich stimme zu, dass meine Angaben aus dem Formular zur Beantwortung meiner Anfrage erhoben und verarbeitet werden. 
+      Details entnehmen Sie unserer <a href="https://warnowmoments.de/datenschutz" target="_blank" rel="noopener">Datenschutzerklärung</a>.
+    </label>
+  </div>
+
+  <div class="row" style="margin-top: 28px;">
+    <button class="btn" id="cta" type="button">Reservierung anfragen</button>
+    <a class="btn2" id="cta2" href="https://warnowmoments.de/contact" target="_blank" rel="noopener">
+      Kontaktformular öffnen
+    </a>
+    <span class="muted" id="cta-status" aria-live="polite" style="font-weight: bold; color: var(--c-conf);"></span>
+  </div>
+
+  <p class="muted" style="margin-top:20px">
+    Hinweis: Bitte ca. 30 Minuten vor Start für Einweisung vor Ort sein. Rückgabe/Anlegen erfolgt nach der Fahrt (ca. 30 Minuten eingeplant).
   </p>
 </div>
 
@@ -412,21 +489,15 @@
 (() => {
   const LAT = 54.0924;
   const LNG = 12.0991;
-
   const HOURS_MIN = 9;
   const HOURS_MAX = 18;
-
   const TL_START_HOUR = HOURS_MIN;
   const TL_END_HOUR = HOURS_MAX;
-
   const RETURN_BUFFER_MIN = 30;
-
   const PUBLIC_CAL_URL = "./wm_public_calendar.json";
   const BLOCK_STATUSES = new Set(["reserved","confirmed"]);
-
   const WORKERURL = "https://reservierung-v2.kontakt-70d.workers.dev/";
 
-  // Elemente
   const dateEl = document.getElementById("date");
   const pkgEl = document.getElementById("package");
   const startEl = document.getElementById("start");
@@ -436,7 +507,6 @@
   const ctaStatusEl = document.getElementById("cta-status");
   const selectedPillEl = document.getElementById("selected-pill");
   const sunsetPillEl = document.getElementById("sunset-pill");
-  const publicPillEl = document.getElementById("public-pill");
   const nameEl = document.getElementById("name");
   const emailEl = document.getElementById("email");
   const phoneEl = document.getElementById("phone");
@@ -464,7 +534,6 @@
   const tipDurEl = document.getElementById("tl-tip-dur");
 
   let publicEvents = [];
-  let publicCalendarState = "unknown";
   let calCursor = new Date();
   let calSelectedISO = null;
   let lastPayload = null;
@@ -476,19 +545,10 @@
 
   function pad2(n){ return String(n).padStart(2,"0"); }
   function fmtTime(h){ return `${pad2(h)}:00`; }
-  function setError(msg){
-    errEl.style.display = msg ? "block" : "none";
-    errEl.textContent = msg || "";
-  }
-  function setCtaStatus(msg){
-    if(!ctaStatusEl) return;
-    ctaStatusEl.textContent = msg || "";
-  }
-  function rangesOverlap(aStart,aEnd,bStart,bEnd){
-    return aStart < bEnd && bStart < aEnd;
-  }
+  function setError(msg){ errEl.style.display = msg ? "block" : "none"; errEl.textContent = msg || ""; }
+  function setCtaStatus(msg){ if(ctaStatusEl) ctaStatusEl.textContent = msg || ""; }
+  function rangesOverlap(aStart,aEnd,bStart,bEnd){ return aStart < bEnd && bStart < aEnd; }
   
-  // Diese Funktion sorgt dafür, dass das Datum fehlerfrei im korrekten lokalen Format umgewandelt wird
   function calToISODate(d){
     const y = d.getFullYear();
     const m = String(d.getMonth()+1).padStart(2,"0");
@@ -496,10 +556,7 @@
     return `${y}-${m}-${dd}`;
   }
   
-  function fmtHM(ms){
-    const d = new Date(ms);
-    return d.toLocaleTimeString("de-DE", { hour:"2-digit", minute:"2-digit" });
-  }
+  function fmtHM(ms){ return new Date(ms).toLocaleTimeString("de-DE", { hour:"2-digit", minute:"2-digit" }); }
   function fmtDuration(ms){
     const totalMin = Math.max(0, Math.round(ms / 60000));
     const h = Math.floor(totalMin / 60);
@@ -507,14 +564,9 @@
     if(m === 0) return `${h}h`;
     return `${h}h ${m}min`;
   }
-  function escapeText(s){
-    return String(s || "").replace(/\\s+/g, " ").trim();
-  }
+  function escapeText(s){ return String(s || "").replace(/\s+/g, " ").trim(); }
 
-  // Korrigiertes getTodayISO() für die sichere lokale Datums-Ermittlung
-  async function getTodayISO(){
-    return calToISODate(new Date());
-  }
+  async function getTodayISO(){ return calToISODate(new Date()); }
 
   async function setTodayDate(){
     try {
@@ -532,19 +584,9 @@
       const ev = Array.isArray(data?.events) ? data.events : [];
       publicEvents = ev
         .filter(e => e && BLOCK_STATUSES.has(String(e.status)))
-        .map(e => ({
-          status: String(e.status),
-          startMs: new Date(e.start).getTime(),
-          endMs: new Date(e.end).getTime()
-        }))
+        .map(e => ({ status: String(e.status), startMs: new Date(e.start).getTime(), endMs: new Date(e.end).getTime() }))
         .filter(e => Number.isFinite(e.startMs) && Number.isFinite(e.endMs) && e.endMs > e.startMs);
-      publicCalendarState = publicEvents.length ? "loaded" : "empty";
-      publicPillEl.textContent = "";
-    } catch(e){
-      publicEvents = [];
-      publicCalendarState = "failed";
-      publicPillEl.textContent = "Kalender aktuell nicht verfügbar";
-    }
+    } catch(e){ publicEvents = []; }
   }
 
   function holidayAppliesToMV(h){
@@ -570,9 +612,7 @@
         }
       }
       holidayByYear.set(year, map);
-    } catch(e){
-      holidayByYear.set(year, new Map());
-    }
+    } catch(e){ holidayByYear.set(year, new Map()); }
   }
 
   async function getSunsetLocal(dateISO){
@@ -653,84 +693,51 @@
       lastPayload = null;
       return;
     }
-    const nameVal = escapeText(nameEl?.value);
-    const emailVal = escapeText(emailEl?.value);
-    const phoneVal = escapeText(phoneEl?.value);
-    const msgVal = escapeText(messageEl?.value);
-    
-    // Checkbox-Status für Kopie auslesen
     const wantsCopy = copyCustomerEl?.checked ? "Ja" : "Nein";
-
     lastPayload = {
-      SQF_name: nameVal,
-      SQF_email: emailVal,
-      SQF_phone: phoneVal,
-      SQF_message: msgVal,
+      SQF_name: escapeText(nameEl?.value),
+      SQF_email: escapeText(emailEl?.value),
+      SQF_phone: escapeText(phoneEl?.value),
+      SQF_message: escapeText(messageEl?.value),
       SQF_date: dateISO,
       SQF_start: startVal,
       SQF_paket: pkgLabel,
-      SQF_copyToCustomer: wantsCopy, // Neues Feld für den Server
-      date: dateISO,
-      start: startVal,
-      paket: pkgLabel,
-      source: "wm-pages",
-      page: location.href
+      SQF_copyToCustomer: wantsCopy,
+      date: dateISO, start: startVal, paket: pkgLabel, source: "wm-pages", page: location.href
     };
     selectedPillEl.textContent = `Auswahl: ${dateISO} • ${pkgLabel} • ${startVal}`;
   }
 
   async function refresh(){
-    setError("");
-    hintEl.textContent = "";
-    sunsetPillEl.textContent = "";
-    setCtaStatus("");
-    const dateISO = dateEl.value;
-    const duration = Number(pkgEl.value);
-    if(!dateISO){
-      setStartOptions([], "");
-      hintEl.textContent = "Bitte Datum auswählen.";
-      updateCtas();
-      return;
-    }
+    setError(""); hintEl.textContent = ""; sunsetPillEl.textContent = ""; setCtaStatus("");
+    const dateISO = dateEl.value; const duration = Number(pkgEl.value);
+    if(!dateISO){ setStartOptions([], ""); hintEl.textContent = "Bitte Datum im Kalender auswählen."; updateCtas(); return; }
     try{
       const sunset = await getSunsetLocal(dateISO);
       const previouslySelected = startEl.value;
       const { allowed, lastStartTsHour } = computeAllowedStartHours(dateISO, sunset, duration);
       const filtered = filterByBookings(dateISO, duration, allowed);
       setStartOptions(filtered, previouslySelected);
-      const sunsetText = sunset.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
-      sunsetPillEl.textContent = `Sonnenuntergang: ca. ${sunsetText} Uhr`;
-      const lastStart = new Date(lastStartTsHour);
-      const lastStartText = lastStart.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
+      sunsetPillEl.textContent = `Sonnenuntergang: ca. ${sunset.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr`;
       if(filtered.length === 0){
-        hintEl.textContent = `Keine Startzeit verfügbar (bereits belegt oder zu spät).`;
+        hintEl.textContent = `An diesem Tag ist keine Startzeit mehr verfügbar.`;
       } else {
-        hintEl.textContent = `Letzter möglicher Start (volle Stunde) für dieses Paket: ${lastStartText} Uhr (inkl. 30 Min Rückgabe-Puffer).`;
+        hintEl.textContent = `Letzter möglicher Start: ${new Date(lastStartTsHour).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr.`;
       }
       updateCtas();
-    } catch(e){
-      setStartOptions([], "");
-      updateCtas();
-    }
+    } catch(e){ setStartOptions([], ""); updateCtas(); }
   }
 
   function validateRequiredFields(){
-    let isValid = true;
-    let firstErrorEl = null;
-
-    [nameEl, emailEl, phoneEl, dateEl, pkgEl, startEl].forEach(el => {
-      if(el) el.classList.remove("input-error");
-    });
+    let isValid = true; let firstErrorEl = null;
+    [nameEl, emailEl, phoneEl, dateEl, pkgEl, startEl].forEach(el => { if(el) el.classList.remove("input-error"); });
     privacyEl.style.outline = "none";
 
     const checkField = (el, condition, msg) => {
       if(!el) return;
       if(!condition){
         el.classList.add("input-error");
-        if(!firstErrorEl) {
-          firstErrorEl = el;
-          setError(msg);
-        }
+        if(!firstErrorEl) { firstErrorEl = el; setError(msg); }
         isValid = false;
       }
     };
@@ -738,66 +745,37 @@
     checkField(nameEl, nameEl.value.trim() !== "", "Bitte Name eingeben.");
     checkField(emailEl, emailEl.value.includes("@") && emailEl.value.includes("."), "Bitte gültige E-Mail eingeben.");
     checkField(phoneEl, phoneEl.value.trim() !== "", "Bitte Telefonnummer eingeben.");
-    checkField(dateEl, dateEl.value !== "", "Bitte Datum auswählen.");
+    checkField(dateEl, dateEl.value !== "", "Bitte ein Datum im Kalender auswählen.");
     
     if(startEl && startEl.disabled) {
       startEl.classList.add("input-error");
-      if(!firstErrorEl) {
-         firstErrorEl = startEl;
-         setError("Bitte Datum/Paket so wählen, dass eine Startzeit verfügbar ist.");
-      }
+      if(!firstErrorEl) { firstErrorEl = startEl; setError("Bitte Datum/Paket so wählen, dass eine Startzeit verfügbar ist."); }
       isValid = false;
     }
 
     if(!privacyEl.checked) {
       privacyEl.style.outline = "2px solid var(--c-error)";
       privacyEl.style.outlineOffset = "2px";
-      if(!firstErrorEl) {
-        firstErrorEl = privacyEl;
-        setError("Bitte stimmen Sie der Datenschutzerklärung zu.");
-      }
+      if(!firstErrorEl) { firstErrorEl = privacyEl; setError("Bitte stimmen Sie der Datenschutzerklärung zu."); }
       isValid = false;
     }
 
-    if(!isValid && firstErrorEl) {
-      firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      firstErrorEl.focus();
-    } else {
-      setError("");
-    }
-
+    if(!isValid && firstErrorEl) { firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); firstErrorEl.focus(); } 
+    else { setError(""); }
     return isValid;
   }
 
-  [nameEl, emailEl, phoneEl, dateEl].forEach(el => {
-    el?.addEventListener("input", () => {
-      el.classList.remove("input-error");
-      if(errEl.style.display === "block") setError("");
-    });
-  });
-  
-  privacyEl?.addEventListener("change", () => {
-    privacyEl.style.outline = "none";
-    if(errEl.style.display === "block") setError("");
-  });
-  
+  [nameEl, emailEl, phoneEl].forEach(el => { el?.addEventListener("input", () => { el.classList.remove("input-error"); if(errEl.style.display === "block") setError(""); }); });
+  privacyEl?.addEventListener("change", () => { privacyEl.style.outline = "none"; if(errEl.style.display === "block") setError(""); });
   copyCustomerEl?.addEventListener("change", updateCtas);
 
   async function submitReservation(){
     if(!validateRequiredFields()) return;
     updateCtas();
-    
     const oldText = ctaEl.textContent;
-    ctaEl.disabled = true;
-    ctaEl.textContent = "Wird gesendet…";
-    setCtaStatus("");
-    
+    ctaEl.disabled = true; ctaEl.textContent = "Wird gesendet…"; setCtaStatus("");
     try{
-      const res = await fetch(WORKERURL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(lastPayload)
-      });
+      const res = await fetch(WORKERURL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(lastPayload) });
       if(res.ok){
         ctaEl.textContent = "Erfolgreich gesendet ✓";
         setCtaStatus("Vielen Dank! Ihre Anfrage wurde versendet.");
@@ -807,26 +785,19 @@
       }
       throw new Error(`Serverfehler`);
     } catch(e){
-      setError("Senden fehlgeschlagen. Bitte überprüfen Sie Ihre Internetverbindung oder nutzen Sie das Kontaktformular.");
+      setError("Senden fehlgeschlagen. Bitte nutzen Sie unser Kontaktformular.");
       ctaEl.textContent = oldText;
-    } finally {
-      ctaEl.disabled = false;
-    }
+    } finally { ctaEl.disabled = false; }
   }
 
   function isAllDayLike(startMs, endMs){
-    const s = new Date(startMs);
-    const e = new Date(endMs);
+    const s = new Date(startMs); const e = new Date(endMs);
     return s.getHours() === 0 && s.getMinutes() === 0 && (e.getHours() === 23 && (e.getMinutes() === 59 || e.getMinutes() === 0));
   }
 
   function getBlocksForDay(dayISO){
-    const dayStart = new Date(dayISO + "T00:00:00").getTime();
-    const dayEnd = new Date(dayISO + "T23:59:59").getTime();
-    return publicEvents
-      .filter(e => rangesOverlap(dayStart, dayEnd, e.startMs, e.endMs))
-      .map(e => ({ status: e.status, startMs: Math.max(e.startMs, dayStart), endMs: Math.min(e.endMs, dayEnd) }))
-      .sort((a,b) => a.startMs - b.startMs);
+    const dayStart = new Date(dayISO + "T00:00:00").getTime(), dayEnd = new Date(dayISO + "T23:59:59").getTime();
+    return publicEvents.filter(e => rangesOverlap(dayStart, dayEnd, e.startMs, e.endMs)).map(e => ({ status: e.status, startMs: Math.max(e.startMs, dayStart), endMs: Math.min(e.endMs, dayEnd) })).sort((a,b) => a.startMs - b.startMs);
   }
 
   function renderBlocksList(dayISO){
@@ -835,10 +806,7 @@
     if(!blocks.length){ calBlocksTitleEl.textContent = ""; return; }
     calBlocksTitleEl.textContent = "Belegungen an diesem Tag:";
     for(const b of blocks){
-      const row = document.createElement("div");
-      row.className = "muted";
-      row.style.fontWeight = "800";
-      row.style.marginTop = "6px";
+      const row = document.createElement("div"); row.className = "muted"; row.style.fontWeight = "800"; row.style.marginTop = "6px";
       const label = b.status === "confirmed" ? "Gebucht" : "Reserviert";
       const allDay = isAllDayLike(b.startMs, b.endMs);
       const dur = fmtDuration(b.endMs - b.startMs);
@@ -847,11 +815,7 @@
     }
   }
 
-  function tipClose(){
-    tipEl?.classList.remove("open");
-    tipEl?.removeAttribute("data-pinned");
-  }
-
+  function tipClose(){ tipEl?.classList.remove("open"); tipEl?.removeAttribute("data-pinned"); }
   function tipOpenAt(x, y, title, timeText, durText, pin){
     if(!tipEl) return;
     tipTitleEl.textContent = title; tipTimeEl.textContent = timeText; tipDurEl.textContent = durText;
@@ -865,11 +829,8 @@
   function renderTimeline(dayISO){
     const blocks = getBlocksForDay(dayISO);
     tlScaleEl.innerHTML = "";
-    [TL_START_HOUR, TL_START_HOUR+3, TL_START_HOUR+6, TL_END_HOUR].forEach(h => {
-      const sp = document.createElement("span"); sp.textContent = `${pad2(h)}:00`; tlScaleEl.appendChild(sp);
-    });
-    tlBarEl.querySelectorAll(".tl-block").forEach(n => n.remove());
-    tipClose();
+    [TL_START_HOUR, TL_START_HOUR+3, TL_START_HOUR+6, TL_END_HOUR].forEach(h => { const sp = document.createElement("span"); sp.textContent = `${pad2(h)}:00`; tlScaleEl.appendChild(sp); });
+    tlBarEl.querySelectorAll(".tl-block").forEach(n => n.remove()); tipClose();
     const rangeStart = new Date(dayISO + "T00:00:00").setHours(TL_START_HOUR,0,0,0);
     const rangeEnd = new Date(dayISO + "T00:00:00").setHours(TL_END_HOUR,0,0,0);
     const range = Math.max(1, rangeEnd - rangeStart);
@@ -879,11 +840,9 @@
       if(e <= s) return;
       const div = document.createElement("div");
       div.className = "tl-block " + (b.status === "confirmed" ? "conf" : "res");
-      div.style.left = `${((s - rangeStart) / range) * 100}%`;
-      div.style.width = `${Math.max(0.8, ((e - s) / range) * 100)}%`;
+      div.style.left = `${((s - rangeStart) / range) * 100}%`; div.style.width = `${Math.max(0.8, ((e - s) / range) * 100)}%`;
       const label = b.status === "confirmed" ? "Gebucht" : "Reserviert";
-      const timeText = `${fmtHM(b.startMs)}–${fmtHM(b.endMs)}`;
-      const durText = `Dauer: ${fmtDuration(b.endMs - b.startMs)}`;
+      const timeText = `${fmtHM(b.startMs)}–${fmtHM(b.endMs)}`; const durText = `Dauer: ${fmtDuration(b.endMs - b.startMs)}`;
       div.addEventListener("mousemove", (ev) => { if(tipEl?.getAttribute("data-pinned") !== "1") tipOpenAt(ev.clientX, ev.clientY, label, timeText, durText, false); });
       div.addEventListener("mouseleave", () => { if(tipEl?.getAttribute("data-pinned") !== "1") tipClose(); });
       div.addEventListener("click", (ev) => { ev.stopPropagation(); tipOpenAt(ev.clientX, ev.clientY, label, timeText, durText, true); });
@@ -895,9 +854,7 @@
     const aStart = new Date(iso + "T00:00:00").getTime(), aEnd = new Date(iso + "T23:59:59").getTime();
     let reserved = 0, confirmed = 0;
     for(const e of publicEvents){
-      if(rangesOverlap(aStart, aEnd, e.startMs, e.endMs)){
-        if(e.status === "confirmed") confirmed++; else if(e.status === "reserved") reserved++;
-      }
+      if(rangesOverlap(aStart, aEnd, e.startMs, e.endMs)){ if(e.status === "confirmed") confirmed++; else if(e.status === "reserved") reserved++; }
     }
     return { reserved, confirmed };
   }
@@ -905,22 +862,21 @@
   function buildSlotButtons(dayISO, hours){
     calSlotsEl.innerHTML = "";
     if(!hours.length){
-      const span = document.createElement("span"); span.className = "muted"; span.textContent = "Keine freien Startzeiten an diesem Tag."; calSlotsEl.appendChild(span);
-      return;
+      const span = document.createElement("span"); span.className = "muted"; span.textContent = "An diesem Tag sind keine Startzeiten mehr verfügbar."; calSlotsEl.appendChild(span); return;
     }
     hours.forEach(h => {
       const btn = document.createElement("button"); btn.type = "button"; btn.className = "btn2"; btn.textContent = fmtTime(h);
       btn.addEventListener("click", async () => {
         calSelectedISO = dayISO; dateEl.value = dayISO; await refresh();
         startEl.value = fmtTime(h); updateCtas();
-        selectedPillEl?.scrollIntoView({behavior:"smooth", block:"center"});
+        pkgEl?.scrollIntoView({behavior:"smooth", block:"center"});
       });
       calSlotsEl.appendChild(btn);
     });
   }
 
   async function showDaySlots(dayISO){
-    calDayTitleEl.textContent = `Freie Startzeiten am ${dayISO} (für das ausgewählte Paket):`;
+    calDayTitleEl.textContent = `Wähle eine freie Startzeit am ${dayISO}:`;
     calSlotsEl.innerHTML = "";
     try{
       const sunset = await getSunsetLocal(dayISO);
@@ -928,7 +884,7 @@
       const { allowed } = computeAllowedStartHours(dayISO, sunset, duration);
       buildSlotButtons(dayISO, filterByBookings(dayISO, duration, allowed));
     } catch(e){
-      const span = document.createElement("span"); span.className = "muted"; span.textContent = "Konnte nicht berechnet werden."; calSlotsEl.appendChild(span);
+      const span = document.createElement("span"); span.className = "muted"; span.textContent = "Startzeiten konnten nicht berechnet werden."; calSlotsEl.appendChild(span);
     }
     renderBlocksList(dayISO); renderTimeline(dayISO);
   }
@@ -941,42 +897,40 @@
     const firstDow = (new Date(year, month, 1).getDay() + 6) % 7;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const todayMs = new Date(new Date().setHours(0,0,0,0)).getTime();
-    const todayISO = await getTodayISO(); // Nutzt die sichere lokale Version
+    const todayISO = await getTodayISO();
     
-    const grid = document.createElement("div");
-    grid.style.display = "grid"; grid.style.gridTemplateColumns = "repeat(7, minmax(0, 1fr))"; grid.style.gap = "8px";
+    calGridEl.innerHTML = "";
     ["Mo","Di","Mi","Do","Fr","Sa","So"].forEach(d => {
-      const h = document.createElement("div"); h.className = "muted"; h.style.textAlign = "center"; h.style.fontWeight = "800"; h.textContent = d; grid.appendChild(h);
+      const h = document.createElement("div"); h.className = "muted"; h.style.textAlign = "center"; h.style.fontWeight = "800"; h.style.fontSize="13px"; h.textContent = d; calGridEl.appendChild(h);
     });
-    for(let i=0; i<firstDow; i++){ const b = document.createElement("div"); b.style.minHeight = "54px"; grid.appendChild(b); }
+    for(let i=0; i<firstDow; i++){ const b = document.createElement("div"); calGridEl.appendChild(b); }
     for(let day=1; day<=daysInMonth; day++){
       const d = new Date(year, month, day); d.setHours(0,0,0,0);
       const iso = calToISODate(d), isPast = d.getTime() < todayMs;
-      const cell = document.createElement("button"); cell.type = "button";
-      cell.style.cssText = `display:block; width:100%; text-align:left; border:1px solid var(--c-border); border-radius:12px; padding:8px; min-height:54px; background:#fff; cursor:${isPast?'not-allowed':'pointer'}; opacity:${isPast?'0.45':'1'};`;
-      if(iso === todayISO) cell.style.background = "rgba(29,51,74,.06)";
-      if(calSelectedISO === iso) { cell.style.outline = "3px solid rgba(29,51,74,.30)"; cell.style.outlineOffset = "2px"; }
+      const cell = document.createElement("button"); cell.type = "button"; cell.className = "cal-cell";
       
-      const num = document.createElement("div"); num.style.fontWeight = "800"; num.textContent = day; cell.appendChild(num);
+      if(isPast) cell.setAttribute("disabled", "true");
+      if(iso === todayISO) cell.classList.add("today");
+      if(calSelectedISO === iso) cell.classList.add("selected");
+      
+      const num = document.createElement("div"); num.className = "cal-num"; num.textContent = day; cell.appendChild(num);
       const hol = holidayMap.get(iso);
       if(hol){ const hEl = document.createElement("div"); hEl.className = "holiday-label"; hEl.textContent = hol; cell.appendChild(hEl); cell.title = hol; }
       
       const { reserved, confirmed } = countBlocksOnDay(iso);
       if(reserved || confirmed){
-        const badge = document.createElement("div"); badge.className = "muted"; badge.style.cssText = "margin-top:4px; font-size:12px; font-weight:800;";
-        const parts = []; if(confirmed) parts.push(`Gebucht: ${confirmed}`); if(reserved) parts.push(`Reserv.: ${reserved}`);
-        badge.textContent = parts.join(" • "); cell.appendChild(badge);
+        const badge = document.createElement("div"); badge.className = "cal-badge";
+        const parts = []; if(confirmed) parts.push(`${confirmed} geb.`); if(reserved) parts.push(`${reserved} res.`);
+        badge.textContent = parts.join(" | "); cell.appendChild(badge);
       }
       cell.addEventListener("click", async () => {
         if(isPast) return;
         calSelectedISO = iso; await renderCalendar(); dateEl.value = iso; await refresh(); showDaySlots(iso);
       });
-      grid.appendChild(cell);
+      calGridEl.appendChild(cell);
     }
-    calGridEl.innerHTML = ""; calGridEl.appendChild(grid);
   }
 
-  // Event Listeners
   calPrevEl?.addEventListener("click", async () => { calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()-1, 1); await renderCalendar(); });
   calNextEl?.addEventListener("click", async () => { calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()+1, 1); await renderCalendar(); });
   calTodayEl?.addEventListener("click", async () => {
@@ -984,23 +938,13 @@
     calSelectedISO = todayISO; await renderCalendar(); dateEl.value = todayISO; await refresh(); showDaySlots(todayISO);
   });
   pkgEl?.addEventListener("change", async () => { await refresh(); if(calSelectedISO) showDaySlots(calSelectedISO); });
-  dateEl.addEventListener("change", async () => {
-    const iso = dateEl.value; if(!iso) return; calSelectedISO = iso;
-    calCursor = new Date(iso + "T00:00:00"); calCursor.setDate(1); calCursor.setHours(0,0,0,0);
-    await renderCalendar(); await refresh(); showDaySlots(iso);
-  });
-  startEl.addEventListener("change", updateCtas);
+  
   ctaEl?.addEventListener("click", submitReservation);
   tipCloseEl?.addEventListener("click", tipClose);
 
   let resizeTimeout;
   function wmPostHeight(){
-    const h = Math.max(
-      document.documentElement.scrollHeight,
-      document.body?.scrollHeight || 0,
-      document.documentElement.offsetHeight,
-      document.body?.offsetHeight || 0
-    );
+    const h = Math.max(document.documentElement.scrollHeight, document.body?.scrollHeight || 0, document.documentElement.offsetHeight, document.body?.offsetHeight || 0);
     window.parent?.postMessage({ type: "wm-iframe-height", height: h }, "https://warnowmoments.de");
     window.parent?.postMessage({ type: "wm-iframe-height", height: h }, "https://www.warnowmoments.de");
   }
@@ -1015,16 +959,11 @@
       await renderCalendar(); await refresh(); if(calSelectedISO) showDaySlots(calSelectedISO); updateCtas();
       
       if ("ResizeObserver" in window) {
-        const ro = new ResizeObserver(() => {
-          clearTimeout(resizeTimeout);
-          resizeTimeout = setTimeout(wmPostHeight, 50);
-        });
+        const ro = new ResizeObserver(() => { clearTimeout(resizeTimeout); resizeTimeout = setTimeout(wmPostHeight, 50); });
         ro.observe(document.documentElement);
       }
       wmPostHeight();
-    } catch(e) {
-      setError("Initialisierung fehlgeschlagen. Bitte Seite neu laden.");
-    }
+    } catch(e) { setError("Initialisierung fehlgeschlagen. Bitte Seite neu laden."); }
   }
 
   init();
