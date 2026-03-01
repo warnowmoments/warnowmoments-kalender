@@ -1,7 +1,7 @@
 export async function onRequest(context) {
   // SUPABASE Zugangsdaten (deine anonymen Keys)
   const SUPABASE_URL = 'https://fnktiyujyznbbhwkeyww.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZua3RpeXVqeXpuYmJod2tleXd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA1MjM2MDAsImV4cCI6MjA0NjA5OTYwMH0.publishablecJyOwgz2NXfDiTj7mRUVrQVMAMoVdd';
+  const SUPABASE_ANON_KEY = 'sb_publishable_cJyOwgz2NXfDiTj7mRUVrQ_VMAMoVdd';
 
   try {
     const response = await fetch(
