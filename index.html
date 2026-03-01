@@ -1,3397 +1,1006 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CJ WARNOW MOMENTS UG (haftungsbeschränkt) - Angebots-, Auftragsbestätigungs- und Rechnungsvordrucke</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Warnow Moments – Verfügbarkeit</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-// ===== SUPABASE & AUTH & INIT =====
-var sb;
-window.addEventListener('load', async () => {
-    // Basic init stuff
-    const today = new Date().toISOString().split("T")[0];
-    setIfExists("angebot-datum", today);
-    setIfExists("auftragsbestaetigung-datum", today);
-    setIfExists("rechnung-datum", today);
-    setTextareaIfEmpty("angebot-notizen", defaultTextAngebot());
-    setTextareaIfEmpty("auftragsbestaetigung-notizen", defaultTextAuftragsbestaetigung());
-    setTextareaIfEmpty("rechnung-notizen", defaultTextRechnung());
-    addItem("angebot");
-    addItem("rechnung");
-    if (typeof bookingRefreshUI === 'function') bookingRefreshUI();
-    updateOfferBookingCheck(false);
-
-    if (typeof supabase !== 'undefined') {
-        const { createClient } = supabase;
-        sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        console.log('✅ Supabase ready');
-
-        sb.auth.onAuthStateChange((event, session) => {
-            console.log('Auth event:', event);
-            if (session) {
-                const overlay = document.getElementById('gateOverlay');
-                if (overlay) overlay.style.setProperty('display', 'none', 'important');
-                if (typeof bookingRefreshUI === 'function') bookingRefreshUI();
-            } else {
-                const overlay = document.getElementById('gateOverlay');
-                if (overlay) overlay.style.setProperty('display', 'flex', 'important');
-            }
-        });
-
-        const { data: { session } } = await sb.auth.getSession();
-        if (session) {
-            const overlay = document.getElementById('gateOverlay');
-            if (overlay) overlay.style.setProperty('display', 'none', 'important');
-            if (typeof bookingRefreshUI === 'function') bookingRefreshUI();
-        }
-    } else {
-        console.error('❌ Supabase CDN nicht geladen');
-    }
-
-    const firstTab = document.querySelector('.tab');
-    if (firstTab && typeof switchTab === 'function') switchTab(firstTab, 'angebot-panel');
-});
-
-async function login() {
-  const emailEl = document.getElementById('loginEmail');
-  const passEl = document.getElementById('loginPassword');
-  const statusEl = document.getElementById('authStatus');
-  if (!emailEl || !passEl) return;
-  if (!emailEl.value || !passEl.value) {
-    statusEl.innerHTML = '<span style="color:#c62828;font-weight:bold;">Bitte E-Mail und Passwort eingeben.</span>';
-    return;
-  }
-  statusEl.innerHTML = 'Prüfe Daten...';
-  try {
-      const { data, error } = await sb.auth.signInWithPassword({ email: emailEl.value, password: passEl.value });
-      if (error) statusEl.innerHTML = `<span style="color:#c62828;font-weight:bold;">Fehler: ${error.message}</span>`;
-      else statusEl.innerHTML = '<span style="color:#2e7d32;font-weight:bold;">Erfolgreich!</span>';
-  } catch (err) { statusEl.innerHTML = `<span style="color:#c62828;font-weight:bold;">Netzwerk-Fehler!</span>`; }
-}
-
-async function logout() {
-  if (!confirm("Möchtest du dich wirklich abmelden?")) return;
-  try {
-    if (sb) await sb.auth.signOut();
-    localStorage.removeItem('supabase.auth.token');
-    sessionStorage.clear();
-    const overlay = document.getElementById('gateOverlay');
-    if (overlay) overlay.style.setProperty('display', 'flex', 'important');
-    document.getElementById('loginPassword').value = '';
-    document.getElementById('authStatus').innerText = 'Abgemeldet.';
-  } catch(e) { console.error("Logout Fehler", e); }
-}
-
-function switchTab(a, b) {
-  let clickedEl = null;
-  let targetId = null;
-  if (typeof a === 'string') {
-    targetId = a.endsWith('-panel') ? a : (a + '-panel');
-    if (b && b.target) clickedEl = b.target;
-  } else {
-    clickedEl = a || null;
-    targetId = String(b || '');
-  }
-  document.querySelectorAll('.document-panel').forEach(p => p.classList.remove('active'));
-  const panel = targetId ? document.getElementById(targetId) : null;
-  if (panel) panel.classList.add('active');
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  if (clickedEl && clickedEl.classList) clickedEl.classList.add('active');
-  if (targetId === 'buchungen-panel' && typeof bookingRefreshUI === 'function') bookingRefreshUI();
-  if (targetId === 'kalender-panel' && typeof WMK_CAL !== 'undefined' && WMK_CAL && typeof WMK_CAL.render === 'function') setTimeout(() => WMK_CAL.render(), 0);
-}
-
-</script>
-
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Turnstile -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root{
+      --font: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      --fs-base: 16px;
+      --lh-base: 1.45;
 
-    body {
-      font-family: 'Montserrat', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #1D334A 0%, #1D334A 100%);
-      padding: 20px;
-      min-height: 100vh;
+      --fs-h1: 34px;
+      --lh-h1: 1.12;
+
+      --fs-label: 15px;
+      --fs-ui: 16px;
+      --fs-muted: 14px;
+
+      --fw-regular: 500;
+      --fw-strong: 800;
+
+      --c-text: #0f172a;
+      --c-muted: #4b5563;
+      --c-border: #e5e7eb;
+      --c-bg-pill: #f3f4f6;
+      --c-primary: #1d334a;
+      --c-error: #b91c1c;
+
+      --c-res: #d97706;
+      --c-conf: #64748b;
+
+      --radius: 24px;
+      --radius-btn: 999px;
+      --pad: 24px;
     }
 
-    .container { max-width: 1200px; margin: 0 auto; }
+    *, *::before, *::after { box-sizing: border-box; }
 
-    .header { text-align: center; color: white; margin-bottom: 30px; }
-    .header h1 { font-size: 2.5em; margin-bottom: 10px; }
-
-    .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-
-    .tab {
-      flex: 1;
-      min-width: 180px;
-      padding: 15px 25px;
-      background: rgba(255, 255, 255, 0.2);
-      color: white;
-      border: 2px solid white;
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: 1.05em;
-      font-weight: bold;
-      transition: all 0.3s ease;
-      text-align: center;
-      user-select: none;
+    body{
+      font-family: var(--font);
+      font-size: var(--fs-base);
+      line-height: var(--lh-base);
+      color: var(--c-text);
+      margin:0;
+      padding:16px;
+      max-width: 100%;
+      margin-left: auto;
+      margin-right: auto;
+      overflow-x: hidden;
+      background: transparent;
     }
 
-    .tab:hover { background: rgba(255, 255, 255, 0.3); }
-    .tab.active { background: white; color: #1D334A; }
-
-    .document-panel {
-      display: none;
-      background: white;
-      border-radius: 15px;
-      padding: 30px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-    }
-    .document-panel.active { display: block; }
-
-    .form-section { margin-bottom: 30px; }
-
-    .form-section h2 {
-      color: #1D334A;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #1D334A;
-    }
-
-    .form-group { margin-bottom: 15px; }
-
-    label { display: block; font-weight: 600; margin-bottom: 5px; color: #333; }
-
-    input, textarea, select {
-      width: 100%;
-      padding: 10px;
-      border: 2px solid #ddd;
-      border-radius: 5px;
-      font-size: 1em;
-      font-family: inherit;
-      transition: border-color 0.3s ease;
-    }
-
-    input:focus, textarea:focus, select:focus { outline: none; border-color: #1D334A; }
-
-    textarea { resize: vertical; min-height: 80px; }
-
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-
-    .items-section { margin-top: 20px; }
-
-    .item-row {
+    .dashboard-layout {
       display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr auto;
-      gap: 10px;
-      margin-bottom: 10px;
-      align-items: end;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (min-width: 900px) {
+      .dashboard-layout { grid-template-columns: 1fr 1fr; }
     }
 
-    .add-item-btn, .remove-item-btn {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: all 0.3s ease;
-    }
+    h2{ margin:0 0 20px; font-size:22px; line-height:1.2; letter-spacing: -0.02em; }
+    h3{ margin:0 0 12px; font-size:16px; }
 
-    .add-item-btn { background: #1D334A; color: white; margin-top: 10px; }
-    .add-item-btn:hover { background: #5568d3; }
-
-    .remove-item-btn { background: #f44336; color: white; padding: 10px 15px; }
-    .remove-item-btn:hover { background: #da190b; }
-
-    .actions { display: flex; gap: 15px; margin-top: 30px; flex-wrap: wrap; }
-
-    .btn {
-      flex: 1;
-      min-width: 150px;
-      padding: 15px 30px;
-      border: none;
-      border-radius: 8px;
-      font-size: 1.1em;
-      font-weight: bold;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    .btn-primary { background: #1D334A; color: white; }
-    .btn-primary:hover { background: #5568d3; }
-
-    .btn-secondary { background: #4caf50; color: white; }
-    .btn-secondary:hover { background: #45a049; }
-
-    .btn-danger { background: #c62828; color: white; }
-    .btn-danger:hover { background: #a81f1f; }
-
-    .btn-muted { background: #e9eef5; color: #1D334A; }
-    .btn-muted:hover { background: #dde6f2; }
-
-    .preview {
-      background: #f9f9f9;
-      border: 2px solid #ddd;
-      border-radius: 10px;
-      padding: 40px 40px 80px 40px;
-      margin-top: 30px;
-      display: none;
-      position: relative;
-      min-height: 950px;
-    }
-    .preview.active { display: block; }
-
-    .preview-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 40px; }
-    .preview-logo { max-width: 250px; }
-    .preview-company { text-align: right; }
-
-    .preview-title { font-size: 2em; color: #1D334A; margin: 30px 0; font-weight: bold; }
-
-    .preview-section { margin-bottom: 25px; }
-    .preview-section h3 { color: #1D334A; margin-bottom: 10px; }
-
-    .preview-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-    .preview-table th { background: #1D334A; color: white; padding: 12px; text-align: left; }
-    .preview-table td { padding: 10px 12px; border-bottom: 1px solid #ddd; }
-
-    .money { white-space: nowrap; }
-
-    .preview-total { text-align: right; font-size: 1.3em; font-weight: bold; color: #1D334A; margin-top: 20px; }
-
-    .info-box {
+    .card{
+      border:1px solid var(--c-border);
+      border-radius: var(--radius);
+      padding: var(--pad);
       background: #fff;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      padding: 15px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.04);
     }
 
-    .hint {
-      font-size: 0.95em;
-      color: #555;
-      line-height: 1.35;
+    label{ display:block; font-weight: var(--fw-strong); margin:10px 0 6px; font-size: var(--fs-label); padding-left: 4px; }
+
+    select,input[type="text"],input[type="email"],input[type="tel"],input[type="date"],button,textarea{ font: inherit; }
+
+    select,input[type="text"],input[type="email"],input[type="tel"],input[type="date"],textarea{
+      width:100% !important;
+      max-width:100% !important;
+      font-size: var(--fs-ui);
+      border: 1px solid var(--c-border);
+      border-radius: 16px;
+      background: #fff;
+      transition: all 0.2s ease;
+      box-sizing: border-box !important;
+      min-width: 0 !important;
+      margin: 0 !important;
     }
 
-    .status-ok { color: #1b5e20; font-weight: 700; }
-    .status-bad { color: #b71c1c; font-weight: 700; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.95em; }
-
-    .table-plain { width: 100%; border-collapse: collapse; }
-    .table-plain th, .table-plain td { border-bottom: 1px solid #eef1f5; padding: 10px; text-align: left; vertical-align: top; }
-    .tag { display:inline-block; padding:2px 8px; border-radius:999px; font-size: 0.85em; color:#fff; }
-    .t-res { background:#ef6c00; }
-    .t-conf { background:#2e7d32; }
-    .t-canc { background:#607d8b; }
-
-    #runtime-error {
-      display:none;
-      position: fixed;
-      left: 12px; right: 12px; bottom: 12px;
-      background: #fff3f3;
-      border: 2px solid #c62828;
-      border-radius: 12px;
-      padding: 12px;
-      box-shadow: 0 10px 40px rgba(0,0,0,.25);
-      z-index: 999999;
+    select, input[type="text"], input[type="email"], input[type="tel"], input[type="date"] {
+      height: 54px !important;
+      min-height: 54px !important;
+      max-height: 54px !important;
+      padding: 0 16px !important;
+      line-height: normal !important;
     }
-    #runtime-error h3 { color:#b71c1c; margin-bottom:6px; }
-    #runtime-error pre { white-space: pre-wrap; color:#111; font-size: 12px; }
 
-    @media print { .zahlungsblock { page-break-inside: avoid; } }
-
-    @media print {
-      @page { margin: 20mm 15mm 30mm 15mm; }
-      body { background: white; padding: 0; }
-      .header, .tabs, .form-section, .actions, #runtime-error { display: none !important; }
-      .document-panel { box-shadow: none; padding: 0; }
-      .preview {
-        display: block !important;
-        border: none;
-        padding: 0 15mm 0 15mm;
-        page-break-after: auto;
-      }
-      .preview-footer {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        padding: 4mm 15mm 4mm 15mm;
-        border-top: 1px solid #1D334A;
-        font-size: 0.75em;
-        line-height: 1.2;
-        color: #666;
-        background: white;
-        z-index: 9999;
-      }
-      .preview-footer p { margin: 0; }
-      .preview-footer p + p { margin-top: 1.5mm; }
+    textarea {
+      min-height: 110px !important;
+      resize: vertical;
+      border-radius: 20px;
+      padding: 14px 16px !important;
     }
-  
 
-    /* WMK Native Calendar + Popup */
-    .wmk-cal-topbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
-    .wmk-cal-views{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .wmk-viewbtn{border:1px solid #dbe3ee;background:#f7f9fc;color:#1D334A;border-radius:999px;padding:6px 10px;font-weight:900;cursor:pointer;font-size:.92em;line-height:1.1}
-    .wmk-viewbtn.active{background:#1D334A;color:#fff;border-color:#1D334A}
+    input[type="date"] {
+      -webkit-appearance: none !important;
+      -moz-appearance: none !important;
+      appearance: none !important;
+    }
 
-    .wmk-cal-nav{display:flex;gap:8px;align-items:center}
+    select:focus,input:focus,textarea:focus { outline: none; border-color: var(--c-primary); box-shadow: 0 0 0 4px rgba(29,51,74,.08); }
+    .input-error { border-color: var(--c-error) !important; background-color: #fef2f2 !important; }
 
-    .wmk-cal-controls{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;margin-top:10px}
+    select:disabled, input:disabled, textarea:disabled{ background: #f8fafc; color: #6b7280; cursor: not-allowed; }
+    input[type="date"][readonly] { background: #f3f4f6; color: var(--c-primary); font-weight: var(--fw-strong); pointer-events: none; }
 
-    /* Filterkacheln: genug Breite, Text immer sichtbar */
-    .wmk-cal-toggles{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:10px;flex:1 1 100%}
-    .wmk-toggle{display:flex;align-items:flex-start;gap:10px;border:1px solid #dbe3ee;background:#f7f9fc;color:#1D334A;border-radius:12px;padding:10px 12px;font-weight:900;font-size:.95em;line-height:1.25;white-space:normal;cursor:pointer;user-select:none}
-    .wmk-toggle input{margin-top:2px;flex:0 0 auto;width:18px;height:18px}
+    .grid{ display:grid; grid-template-columns: 1fr; gap:16px; align-items:end; }
+    .grid > div { min-width: 0; }
+    @media (min-width: 500px) { .grid-2col { grid-template-columns: 1fr 1fr; } }
 
-    .wm-cal-native{margin-top:12px;min-height:560px}
-    .wm-cal-title{font-weight:900;color:#1D334A;margin:6px 0 12px 0}
+    .btn, .btn2{ display:inline-block; padding:12px 24px; border-radius: var(--radius-btn); border:1px solid var(--c-primary); text-decoration:none; font-weight: var(--fw-strong); font-size: var(--fs-ui); line-height: 1.2; cursor:pointer; background:#fff; color: var(--c-primary); transition: all 0.2s; }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(29,51,74,.15); }
+    .btn2:hover { background: #f8fafc; transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn{ background: var(--c-primary); color:#fff; }
 
-    .wm-cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:8px}
-    .wm-cal-head div{font-weight:900;color:#1D334A;text-align:center}
+    .btn-slot { display:inline-block; padding:10px 18px; border-radius: 999px; border:1px solid var(--c-primary); text-decoration:none; font-weight: var(--fw-strong); font-size: var(--fs-ui); line-height: 1.2; cursor:pointer; background:#fff; color: var(--c-primary); transition: all 0.2s; }
+    .btn-slot:hover { background: #f8fafc; transform: translateY(-1px); }
+    .btn-slot.selected-slot { background: var(--c-primary); color: #fff; box-shadow: 0 4px 12px rgba(29,51,74,.25); border-color: var(--c-primary); }
+    .btn-full { width: 100%; text-align: center; display: block; }
 
-    .wm-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-    .wm-day{border:1px solid #dbe3ee;border-radius:12px;background:#fff;min-height:92px;padding:8px;position:relative;overflow:hidden;cursor:pointer}
-    .wm-day.is-out{opacity:.45;cursor:default}
-    .wm-day.is-selected{outline:3px solid rgba(29,51,74,.35);outline-offset:-2px}
-    .wm-daynum{font-weight:900;color:#1D334A;font-size:1.05em;line-height:1}
-    .wm-holiday{margin-top:4px;color:#b71c1c;font-weight:900;font-size:.78em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .muted{ color: var(--c-muted); font-size: var(--fs-muted); line-height: 1.35; }
+    .error{ color: var(--c-error); font-weight: var(--fw-strong); font-size: var(--fs-muted); line-height: 1.35; }
+    .pill{ display:inline-block; padding:6px 14px; border-radius:999px; background: var(--c-bg-pill); font-weight: var(--fw-strong); font-size: var(--fs-muted); line-height: 1.2; }
+    .kv{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
 
-    .wm-season-main{background:linear-gradient(0deg, rgba(215,231,255,.75), rgba(215,231,255,.75))}
-    .wm-season-off{background:linear-gradient(0deg, rgba(255,231,209,.75), rgba(255,231,209,.75))}
+    #cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+    .cal-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 64px; border: 1px solid var(--c-border); border-radius: 14px; background: #fff; transition: all 0.2s ease; padding: 6px 2px; }
+    .cal-cell:hover:not([disabled]) { background: #f8fafc; border-color: #cbd5e1; transform: scale(1.02); }
+    .cal-cell.partially-booked { background: linear-gradient(135deg, #ffffff 55%, #f1f5f9 55%); }
+    .cal-cell.partially-booked:hover:not([disabled]) { background: linear-gradient(135deg, #f8fafc 55%, #e2e8f0 55%); }
+    .cal-cell.fully-booked { background: #f1f5f9; color: var(--c-muted); }
+    .cal-cell.fully-booked:hover:not([disabled]) { background: #e2e8f0; }
+    .cal-cell.selected { background: var(--c-primary) !important; color: #fff !important; border-color: var(--c-primary) !important; box-shadow: 0 4px 12px rgba(29,51,74,.25); z-index: 2; }
+    .cal-cell.today:not(.selected) { background: rgba(29,51,74,.06); border-color: rgba(29,51,74,.2); }
+    .cal-cell[disabled] { cursor: not-allowed; opacity: 0.4; background: #f9fafb; border-radius: 12px; }
+    .cal-num { font-weight: 900; font-size: 15px; }
+    .holiday-label{ margin-top: 2px; font-size: 10px; line-height: 1.1; font-weight: 800; color: inherit; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .cal-badge { margin-top: 2px; font-size: 10px; font-weight: 800; opacity: 0.8; color: inherit; }
 
-    .wm-badges{position:absolute;left:8px;right:8px;bottom:8px;display:flex;gap:6px;flex-wrap:wrap}
-    .wm-badge-mini{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;font-size:.78em;font-weight:900;color:#fff;cursor:pointer}
-    .wm-badge-mini.res{background:#EF6C00}
-    .wm-badge-mini.conf{background:#1B5E20}
-    .wm-badge-mini span{font-variant-numeric:tabular-nums}
+    .tl-wrap{ border:1px solid var(--c-border); border-radius: 16px; padding:16px; background:#f8fafc; margin-top:20px; }
+    .tl-scale{ display:flex; justify-content:space-between; gap:10px; font-size:12px; color: var(--c-muted); font-weight:800; margin-bottom:10px; }
+    .tl-bar{ position:relative; height:16px; border-radius:999px; background: linear-gradient(90deg, #e2e8f0, #cbd5e1); overflow:hidden; }
+    .tl-block{ position:absolute; top:0; bottom:0; border-radius:999px; opacity:0.95; cursor:pointer; transition: transform 0.2s; }
+    .tl-block:hover { transform: scaleY(1.2); }
+    .tl-block.res{ background: var(--c-res); }
+    .tl-block.conf{ background: var(--c-conf); }
 
-    .wmk-list{width:100%;border-collapse:collapse;margin-top:8px}
-    .wmk-list th,.wmk-list td{border-bottom:1px solid #e6edf6;padding:10px 8px;text-align:left;vertical-align:top}
-    .wmk-list th{color:#1D334A;font-weight:900}
-    .wmk-status{display:inline-block;padding:2px 10px;border-radius:999px;font-weight:900;color:#fff;font-size:.85em}
-    .wmk-status.res{background:#EF6C00}
-    .wmk-status.conf{background:#1B5E20}
+    .tl-legend{ display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; font-size:12px; color: var(--c-muted); font-weight:800; }
+    .tl-dot{ width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px; transform: translateY(1px); }
+    .tl-dot.res{ background: var(--c-res); }
+    .tl-dot.conf{ background: var(--c-conf); }
 
-    .wmk-actions{display:flex;gap:6px;flex-wrap:wrap}
-    .wmk-actions .btn{padding:6px 10px;font-size:.9em}
+    .tl-tip{ position:absolute; z-index: 50; min-width: 220px; max-width: 280px; background:#fff; border:1px solid var(--c-border); border-radius: 12px; box-shadow: 0 18px 50px rgba(0,0,0,.18); padding:12px 14px; font-size: 13px; line-height: 1.25; color: var(--c-text); display:none; }
+    .tl-tip.open{ display:block; }
+    .tl-tip .t-title{ font-weight: 900; margin-bottom: 6px; }
+    .tl-tip .t-row{ color: var(--c-muted); font-weight: 800; }
+    .tl-tip .t-close{ position:absolute; top:8px; right:8px; border:1px solid var(--c-border); background:#f3f4f6; border-radius: 999px; padding:4px 8px; font-weight: 900; cursor:pointer; line-height:1; transition: background 0.2s; }
 
-    .dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
-    .d-res{background:#EF6C00}
-    .d-conf{background:#1B5E20}
+    .checkbox-row { display: flex; gap: 14px; align-items: flex-start; margin-top: 16px; margin-bottom: 8px; background: #f8fafc; padding: 16px; border-radius: 16px; transition: background 0.2s; }
+    .checkbox-row input[type="checkbox"] { margin-top: 2px; width: 22px; height: 22px; cursor: pointer; accent-color: var(--c-primary); }
+    .checkbox-row label { margin: 0; font-weight: var(--fw-regular); font-size: var(--fs-muted); color: var(--c-text); cursor: pointer; line-height: 1.5; }
+    .checkbox-row a { color: var(--c-primary); font-weight: bold; }
 
-    /* Popups (wichtig: sonst stehen die Divs unten im Layout) */
-    .wm-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);padding:18px;z-index:9999}
-    .wm-modal.open{display:flex}
-    .wm-modal-card{background:#fff;border-radius:16px;max-width:920px;width:100%;max-height:88vh;overflow:auto;border:1px solid #dbe3ee;box-shadow:0 18px 60px rgba(0,0,0,.22)}
-    .wm-modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid #e6edf6}
-    .wm-modal-body{padding:14px 16px}
-    .wm-modal-close{border:1px solid #dbe3ee;background:#f7f9fc;color:#1D334A;border-radius:12px;padding:8px 10px;font-weight:900;cursor:pointer}
-    .wm-modal-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-    .wm-kv{display:grid;grid-template-columns:140px 1fr;gap:8px 12px}
-    .wm-kv .k{font-weight:900;color:#1D334A}
-    .wm-kv .v{color:#1D334A}
+    /* Turnstile optisch sauber einbetten */
+    .turnstile-wrap { margin-top: 14px; }
+    .turnstile-label { font-weight: var(--fw-strong); font-size: var(--fs-label); margin: 10px 0 6px; padding-left: 4px; }
 
-  
-
-/* === Kalender: Tageszahl rechts, Feiertag links (Override) === */
-
-/* Monats-/Wochenansicht: Tageszahl rechts oben, Feiertagsname links oben auf gleicher Höhe */
-.wm-day{ position: relative; }
-.wm-daynum{
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  text-align: right;
-}
-.wm-holiday{
-  position: absolute;
-  top: 8px;
-  left: 10px;
-  right: 54px; /* Platz für die Tageszahl rechts */
-  margin-top: 0;
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-</style>
+    /* FIX: Widget nicht kollabieren lassen */
+    .cf-turnstile{
+      min-height: 70px;
+      display: block;
+      position: relative;
+      z-index: 10;
+    }
+  </style>
 </head>
-
 <body>
 
-<div id="gateOverlay" class="gateOverlay show noPrint" style="position:fixed !important;top:0 !important;left:0 !important;right:0 !important;bottom:0 !important;background:rgba(29,51,74,0.95);display:flex !important;align-items:center !important;justify-content:center !important;z-index:9999999 !important;">
-  <div style="background:#fff;padding:40px;border-radius:16px;width:100%;max-width:400px;box-shadow:0 25px 50px rgba(0,0,0,0.25);">
-    <div style="text-align:center;margin-bottom:30px;">
-      <h2 style="color:#1D334A;margin:0 0 10px 0;font-size:24px;">Team Login</h2>
-      <p style="color:#666;margin:0;font-size:14px;">Warnow Moments App</p>
+<div class="dashboard-layout">
+  <div class="card" style="margin: 0; align-self: start;">
+    <div class="row" style="justify-content:space-between;align-items:center; margin-bottom: 20px;">
+      <h2>1. Datum wählen</h2>
+      <div class="row" style="gap: 8px;">
+        <button class="btn2" style="padding: 6px 12px; font-size: 14px;" type="button" id="cal-prev" aria-label="Vorheriger Monat">←</button>
+        <button class="btn2" style="padding: 6px 12px; font-size: 14px;" type="button" id="cal-today">Heute</button>
+        <button class="btn2" style="padding: 6px 12px; font-size: 14px;" type="button" id="cal-next" aria-label="Nächster Monat">→</button>
+      </div>
     </div>
-    <div style="margin-bottom:20px;">
-      <label style="display:block;margin-bottom:8px;font-weight:600;color:#333;font-size:14px;">Email</label>
-      <input type="email" id="loginEmail" value="kontakt@warnowmoments.de" style="width:100%;padding:12px;border:2px solid #ddd;border-radius:8px;font-size:16px;box-sizing:border-box;" required/>
+    <div class="pill" id="cal-title" style="margin-bottom: 16px; display: inline-block;">–</div>
+    <div id="cal-grid"></div>
+  </div>
+
+  <div class="card" style="margin: 0; align-self: start;">
+    <h2>2. Details & Zeit</h2>
+    <div class="grid grid-2col">
+      <div>
+        <label for="date">Gewähltes Datum</label>
+        <input id="date" type="date" required readonly title="Bitte nutze den Kalender links zur Auswahl" />
+      </div>
+      <div>
+        <label for="package">Paket</label>
+        <select id="package" required>
+          <option value="4">Explorer‑Tour (4 Std.)</option>
+          <option value="6">Halbtags‑Cruise (6 Std.)</option>
+          <option value="8">Ganztags‑Abenteuer (8 Std.)</option>
+        </select>
+      </div>
     </div>
-    <div style="margin-bottom:25px;">
-      <label style="display:block;margin-bottom:8px;font-weight:600;color:#333;font-size:14px;">Passwort</label>
-      <input type="password" id="loginPassword" style="width:100%;padding:12px;border:2px solid #ddd;border-radius:8px;font-size:16px;box-sizing:border-box;" required/>
+
+    <div style="display:none;"><select id="start" required></select></div>
+
+    <div style="margin-top: 24px;">
+      <h3>Tagesbelegung & Startzeiten</h3>
+      <div class="tl-wrap" id="cal-timeline-wrap" style="display:none; margin-top: 0; margin-bottom: 12px;">
+        <div class="tl-scale" id="cal-timeline-scale"></div>
+        <div class="tl-bar" id="cal-timeline-bar" aria-label="Belegungen als Zeitleiste">
+          <div class="tl-tip" id="tl-tip" role="dialog" aria-modal="false" aria-label="Belegungsdetails">
+            <button class="t-close" type="button" id="tl-tip-close" aria-label="Schließen">×</button>
+            <div class="t-title" id="tl-tip-title">–</div>
+            <div class="t-row" id="tl-tip-time">–</div>
+            <div class="t-row" id="tl-tip-dur">–</div>
+          </div>
+        </div>
+        <div class="tl-legend">
+          <span><span class="tl-dot conf"></span>Gebucht</span>
+          <span><span class="tl-dot res"></span>Reserviert</span>
+        </div>
+      </div>
+      <div id="cal-blocks" style="margin-bottom: 16px;"></div>
+      <p class="muted" id="cal-day-title" style="margin:0 0 8px; font-weight: bold;"></p>
+      <div id="cal-slots" class="row" style="flex-wrap:wrap;gap:8px;"></div>
     </div>
-    <div style="display:flex;gap:10px;">
-      <button type="button" onclick="login()" style="flex:1;padding:14px 20px;background:#1D334A;color:white;border:none;border-radius:8px;font-weight:600;font-size:16px;cursor:pointer;">Anmelden</button>
-      <button type="button" onclick="logout()" style="flex:1;padding:14px 20px;background:#e9eef5;color:#1D334A;border:none;border-radius:8px;font-weight:600;font-size:16px;cursor:pointer;">Logout</button>
+
+    <div class="kv" style="margin-top: 20px;">
+      <span class="pill" id="selected-pill">Auswahl: –</span>
+      <span class="muted" id="sunset-pill"></span>
     </div>
-    <div id="authStatus" style="margin-top:15px;text-align:center;font-size:14px;color:#666;">Team-Login (kontakt@warnowmoments.de)</div>
+
+    <p class="error" id="err" style="display:none;margin-top:12px"></p>
+
+    <hr style="border: 0; border-top: 1px solid var(--c-border); margin: 32px 0;">
+
+    <h2>3. Kontaktdaten</h2>
+    <div class="grid grid-2col">
+      <div>
+        <label for="name">Name</label>
+        <input id="name" type="text" autocomplete="name" placeholder="Max Mustermann" required />
+      </div>
+      <div>
+        <label for="phone">Telefonnummer</label>
+        <input id="phone" type="tel" autocomplete="tel" placeholder="0151 1234567" required />
+      </div>
+    </div>
+    <div style="margin-top:16px">
+      <label for="email">E‑Mail Adresse</label>
+      <input id="email" type="email" autocomplete="email" placeholder="mail@beispiel.de" required />
+    </div>
+    <div style="margin-top:16px">
+      <label for="message">Nachricht</label>
+      <textarea id="message" placeholder="Optional: z.B. Teilnehmerzahl, besondere Wünsche, Rückfragen …"></textarea>
+    </div>
+
+    <div class="checkbox-row" style="margin-top: 24px;">
+      <input type="checkbox" id="copyCustomer" />
+      <label for="copyCustomer">Bitte senden Sie mir eine Kopie dieser Anfrage an meine E-Mail-Adresse.</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="privacy" required />
+      <label for="privacy">
+        Ich stimme zu, dass meine Angaben erhoben und verarbeitet werden.
+        Details siehe <a href="https://warnowmoments.de/datenschutzerklaerung" target="_blank" rel="noopener">Datenschutzerklärung</a>.
+      </label>
+    </div>
+
+    <!-- Turnstile: Sicherheitsprüfung gegen Spam -->
+    <div class="turnstile-wrap">
+      <div class="turnstile-label">Sicherheitsprüfung</div>
+      <div
+        class="cf-turnstile"
+        data-sitekey="0x4AAAAAAChfQbeBvxdGxiJu"
+        data-error-callback="wmTurnstileError"
+        data-expired-callback="wmTurnstileExpired"
+        data-timeout-callback="wmTurnstileTimeout"
+      ></div>
+      <div class="muted" style="margin-top:6px;">Schützt das Formular vor Spam/Bots.</div>
+    </div>
+
+    <div class="grid grid-2col" style="margin-top: 28px; gap: 12px;">
+      <div><button class="btn btn-full" id="cta" type="button">Anfragen</button></div>
+      <div><a class="btn2 btn-full" id="cta2" href="https://warnowmoments.de/contact" target="_blank" rel="noopener">Kontakt aufnehmen</a></div>
+    </div>
+
+    <div style="text-align: center; margin-top: 12px;">
+      <span class="muted" id="cta-status" aria-live="polite" style="font-weight: bold; color: var(--c-conf);"></span>
+    </div>
+
+    <p class="muted" style="margin-top:20px; text-align: center; font-size: 13px;">
+      Hinweis: Bitte ca. 30 Minuten vor Start für Einweisung vor Ort sein. Rückgabe/Anlegen erfolgt nach der Fahrt (ca. 30 Min. eingeplant).
+    </p>
   </div>
 </div>
 
-<div id="runtime-error">
-  <h3>JavaScript-Fehler</h3>
-  <div class="hint">Wenn das hier erscheint, kopiere bitte den Text an mich.</div>
-  <pre id="runtime-error-text"></pre>
-</div>
-
-<div class="container">
-  <div class="header">
-  <div style="display: flex; justify-content: flex-end; margin-bottom: -15px; position: relative; z-index: 10;">
-   	 <button onclick="logout()" style="padding: 8px 16px; font-size: 0.9em; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.5); border-radius: 6px; cursor: pointer;">Abmelden</button>
-  </div>
-
-    <h1>CJ WARNOW MOMENTS UG (haftungsbeschränkt)</h1>
-    <p>Angebots-, Auftragsbestätigungs- und Rechnungsvordrucke</p>
-  </div>
-
-<div class="tabs">
-  <div class="tab active" onclick="switchTab(this, 'angebot-panel')">Angebot erstellen</div>
-  <div class="tab" onclick="switchTab(this, 'auftragsbestaetigung-panel')">Auftragsbestätigung erstellen</div>
-  <div class="tab" onclick="switchTab(this, 'rechnung-panel')">Rechnung erstellen</div>
-  <div class="tab" onclick="switchTab(this, 'buchungen-panel')">Buchungen</div>
-  <div class="tab" onclick="switchTab(this, 'kalender-panel')">Kalender</div>
-</div>
-
-
-
-<!-- Angebot -->
-  <div id="angebot-panel" class="document-panel active">
-    <div class="form-section">
-      <h2>Kundeninformationen</h2>
-      <div class="form-group">
-        <label for="angebot-kunde-name">Name / Firma *</label>
-        <input type="text" id="angebot-kunde-name" placeholder="Max Mustermann / Musterfirma GmbH">
-      </div>
-      <div class="form-group">
-        <label for="angebot-kunde-adresse">Adresse *</label>
-        <input type="text" id="angebot-kunde-adresse" placeholder="Musterstraße 123">
-      </div>
-      <div class="row">
-        <div class="form-group">
-          <label for="angebot-kunde-plz">PLZ *</label>
-          <input type="text" id="angebot-kunde-plz" placeholder="18055">
-        </div>
-        <div class="form-group">
-          <label for="angebot-kunde-ort">Ort *</label>
-          <input type="text" id="angebot-kunde-ort" placeholder="Rostock">
-        </div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <h2>Angebotsinformationen</h2>
-      <div class="row">
-        <div class="form-group">
-          <label for="angebot-nummer">Angebotsnummer *</label>
-          <input type="text" id="angebot-nummer" placeholder="A-2026-001">
-        </div>
-        <div class="form-group">
-          <label for="angebot-datum">Datum</label>
-          <input type="date" id="angebot-datum">
-        </div>
-      </div>
-      <div class="row">
-        <div class="form-group">
-          <label for="angebot-leistung">Leistungsdatum</label>
-          <input type="date" id="angebot-leistung">
-        </div>
-        <div class="form-group">
-          <label for="angebot-gueltig">Gültig bis (Angebotsfrist) *</label>
-          <input type="date" id="angebot-gueltig" required>
-        </div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <h2>Buchungsprüfung (Floß)</h2>
-      <div class="info-box">
-        <input type="hidden" id="booking-edit-id" value="">
-        <div class="row">
-          <div class="form-group">
-            <label for="angebot-booking-start">Buchungsstart *</label>
-            <input type="datetime-local" id="angebot-booking-start">
-          </div>
-          <div class="form-group">
-            <label for="angebot-booking-end">Buchungsende *</label>
-            <input type="datetime-local" id="angebot-booking-end">
-          </div>
-        </div>
-
-        <input type="hidden" id="angebot-booking-id" value="">
-
-        <div class="row">
-          <button class="btn btn-muted" type="button" onclick="updateOfferBookingCheck(true)">Verfügbarkeit prüfen</button>
-          <button class="btn btn-danger" type="button" onclick="cancelOfferReservation()">Reservierung stornieren</button>
-        </div>
-        <div class="row" style="margin-top:10px; grid-template-columns: 1fr;">
-          <button class="btn btn-muted" type="button" onclick="offerSetFullDay()">Ganzer Tag setzen (00:00–23:59)</button>
-        </div>
-
-
-        <div class="row" style="margin-top:10px;">
-          <button class="btn btn-muted" type="button" onclick="switchTab('buchungen')">Buchungen öffnen</button>
-          <button class="btn btn-secondary" type="button" onclick="reserveOfferNow()">Jetzt reservieren</button>
-        </div>
-
-        <div style="margin-top:12px;" id="angebot-booking-status" class="hint">
-          Tipp: Beim Speichern des Angebots wird automatisch reserviert und nach Angebotsfrist automatisch aufgelöst, wenn keine AB erstellt wurde.
-        </div>
-      </div>
-    </div>
-
-    <div class="form-section items-section">
-      <h2>Positionen</h2>
-      <div id="angebot-items"></div>
-      <button class="add-item-btn" onclick="addItem('angebot')">+ Position hinzufügen</button>
-    </div>
-
-    <div class="form-section">
-      <h2>Zusätzliche Informationen</h2>
-      <div class="form-group">
-        <label for="angebot-notizen">Anmerkungen / Zahlungsbedingungen</label>
-        <textarea id="angebot-notizen"></textarea>
-      </div>
-    </div>
-
-    <div class="actions">
-      <button class="btn btn-primary" onclick="generatePreview('angebot')">Vorschau anzeigen</button>
-      <button class="btn btn-secondary" onclick="printDocument()">Drucken / PDF</button>
-      <button class="btn btn-secondary" onclick="saveAngebotJsonLocally()">Angebot speichern (JSON)</button>
-    </div>
-
-    <div id="angebot-preview" class="preview"></div>
-  </div>
-
-  <!-- Auftragsbestätigung -->
-  <div id="auftragsbestaetigung-panel" class="document-panel">
-    <div class="form-section">
-      <h2>Angebot für Auftragsbestätigung laden</h2>
-      <div class="form-group">
-        <label for="angebot-json-file-ab">Angebots-JSON auswählen</label>
-        <input type="file" id="angebot-json-file-ab" accept="application/json" onchange="loadAngebotJsonForAuftragsbestaetigung(event)">
-      </div>
-    </div>
-
-    <div class="form-section">
-      <h2>Kundeninformationen</h2>
-      <div class="form-group">
-        <label for="auftragsbestaetigung-kunde-name">Name / Firma *</label>
-        <input type="text" id="auftragsbestaetigung-kunde-name">
-      </div>
-      <div class="form-group">
-        <label for="auftragsbestaetigung-kunde-adresse">Adresse *</label>
-        <input type="text" id="auftragsbestaetigung-kunde-adresse">
-      </div>
-      <div class="row">
-        <div class="form-group">
-          <label for="auftragsbestaetigung-kunde-plz">PLZ *</label>
-          <input type="text" id="auftragsbestaetigung-kunde-plz">
-        </div>
-        <div class="form-group">
-          <label for="auftragsbestaetigung-kunde-ort">Ort *</label>
-          <input type="text" id="auftragsbestaetigung-kunde-ort">
-        </div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <h2>Auftragsbestätigungsinformationen</h2>
-      <div class="row">
-        <div class="form-group">
-          <label for="auftragsbestaetigung-nummer">Auftragsbestätigungsnummer *</label>
-          <input type="text" id="auftragsbestaetigung-nummer" placeholder="AB-2026-001">
-        </div>
-        <div class="form-group">
-          <label for="auftragsbestaetigung-datum">Datum (Erstellung) *</label>
-          <input type="date" id="auftragsbestaetigung-datum">
-        </div>
-      </div>
-      <div class="row">
-        <div class="form-group">
-          <label for="auftragsbestaetigung-leistung">Leistungsdatum</label>
-          <input type="date" id="auftragsbestaetigung-leistung">
-        </div>
-        <div class="form-group">
-          <label for="auftragsbestaetigung-referenz-angebot">Referenz Angebotsnummer</label>
-          <input type="text" id="auftragsbestaetigung-referenz-angebot">
-        </div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <h2>Buchung (aus Angebot)</h2>
-      <div class="info-box">
-        <div class="form-group">
-          <label for="auftragsbestaetigung-booking-id">Buchung-ID (local)</label>
-          <input type="text" id="auftragsbestaetigung-booking-id" readonly>
-        </div>
-        <p class="hint">Automatik: Sobald du AB-Vorschau oder AB-Speichern nutzt, wird die Buchung (falls ID vorhanden) auf „bestätigt“ gesetzt.</p>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <h2>Anzahlung (fest verankert)</h2>
-      <div class="info-box">
-        <div class="row">
-          <div class="form-group">
-            <label for="auftragsbestaetigung-anzahlung-betrag">Anzahlung Betrag (Brutto) *</label>
-            <input type="number" id="auftragsbestaetigung-anzahlung-betrag" value="0" min="0" step="0.01">
-          </div>
-          <div class="form-group">
-            <label for="auftragsbestaetigung-anzahlung-mwst">MwSt. (%)</label>
-            <input type="number" id="auftragsbestaetigung-anzahlung-mwst" value="19" min="0" step="1">
-          </div>
-        </div>
-        <div class="row">
-          <div class="form-group">
-            <label for="auftragsbestaetigung-anzahlung-faellig">Zahlungsziel Anzahlung (automatisch +14 Tage)</label>
-            <input type="date" id="auftragsbestaetigung-anzahlung-faellig">
-          </div>
-          <div class="form-group">
-            <label>Hinweis</label>
-            <input type="text" value="Zahlungsziel: 14 Tage nach Erstellung der Auftragsbestätigung" readonly>
-          </div>
-        </div>
-        <p class="hint">Standard: Auto-Anzahlung = 33,333333333333333% der 1. Position (Brutto, Menge×Preis). Bei manueller Änderung wird Auto deaktiviert.</p>
-      </div>
-    </div>
-
-    <div class="form-section items-section">
-      <h2>Positionen (aus Angebot)</h2>
-      <div id="auftragsbestaetigung-items"></div>
-      <button class="add-item-btn" onclick="addItem('auftragsbestaetigung')">+ Position hinzufügen</button>
-    </div>
-
-    <div class="form-section">
-      <h2>Zusätzliche Informationen</h2>
-      <div class="form-group">
-        <label for="auftragsbestaetigung-notizen">Anmerkungen</label>
-        <textarea id="auftragsbestaetigung-notizen"></textarea>
-      </div>
-    </div>
-
-    <div class="actions">
-      <button class="btn btn-primary" onclick="generatePreview('auftragsbestaetigung')">Vorschau anzeigen</button>
-      <button class="btn btn-secondary" onclick="printDocument()">Drucken / PDF</button>
-      <button class="btn btn-secondary" onclick="saveAuftragsbestaetigungJsonLocally()">Auftragsbestätigung speichern (JSON)</button>
-    </div>
-
-    <div id="auftragsbestaetigung-preview" class="preview"></div>
-  </div>
-
-  <!-- Rechnung -->
-  <div id="rechnung-panel" class="document-panel">
-    <div class="form-section">
-      <h2>Auftragsbestätigung für Rechnung laden</h2>
-      <div class="form-group">
-        <label for="ab-json-file-rechnung">Auftragsbestätigungs-JSON auswählen</label>
-        <input type="file" id="ab-json-file-rechnung" accept="application/json" onchange="loadAuftragsbestaetigungJsonForRechnung(event)">
-      </div>
-    </div>
-
-    <div class="form-section">
-      <h2>Kundeninformationen</h2>
-      <div class="form-group">
-        <label for="rechnung-kunde-name">Name / Firma *</label>
-        <input type="text" id="rechnung-kunde-name">
-      </div>
-      <div class="form-group">
-        <label for="rechnung-kunde-adresse">Adresse *</label>
-        <input type="text" id="rechnung-kunde-adresse">
-      </div>
-      <div class="row">
-        <div class="form-group">
-          <label for="rechnung-kunde-plz">PLZ *</label>
-          <input type="text" id="rechnung-kunde-plz">
-        </div>
-        <div class="form-group">
-          <label for="rechnung-kunde-ort">Ort *</label>
-          <input type="text" id="rechnung-kunde-ort">
-        </div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <h2>Rechnungsinformationen</h2>
-      <div class="row">
-        <div class="form-group">
-          <label for="rechnung-nummer">Rechnungsnummer *</label>
-          <input type="text" id="rechnung-nummer" placeholder="R-2026-001">
-        </div>
-        <div class="form-group">
-          <label for="rechnung-datum">Rechnungsdatum *</label>
-          <input type="date" id="rechnung-datum">
-        </div>
-      </div>
-      <div class="row">
-        <div class="form-group">
-          <label for="rechnung-leistung">Leistungsdatum</label>
-          <input type="date" id="rechnung-leistung">
-        </div>
-        <div class="form-group">
-          <label for="rechnung-faellig">Fällig am (automatisch +14 Tage)</label>
-          <input type="date" id="rechnung-faellig">
-        </div>
-      </div>
-      <div class="row">
-        <div class="form-group">
-          <label for="rechnung-referenz-ab">Referenz Auftragsbestätigung</label>
-          <input type="text" id="rechnung-referenz-ab">
-        </div>
-        <div class="form-group">
-          <label for="rechnung-referenz-angebot">Referenz Angebot (optional)</label>
-          <input type="text" id="rechnung-referenz-angebot">
-        </div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <h2>Anzahlung (aus Auftragsbestätigung)</h2>
-      <div class="info-box">
-        <div class="row">
-          <div class="form-group">
-            <label for="rechnung-anzahlung-betrag">Anzahlung Betrag (Brutto)</label>
-            <input type="number" id="rechnung-anzahlung-betrag" value="0" min="0" step="0.01" readonly>
-          </div>
-          <div class="form-group">
-            <label for="rechnung-anzahlung-mwst">MwSt. (%)</label>
-            <input type="number" id="rechnung-anzahlung-mwst" value="19" min="0" step="1" readonly>
-          </div>
-        </div>
-        <div class="row">
-          <div class="form-group">
-            <label for="rechnung-anzahlung-faellig">Zahlungsziel (Anzahlung)</label>
-            <input type="date" id="rechnung-anzahlung-faellig" readonly>
-          </div>
-          <div class="form-group">
-            <label for="rechnung-anzahlung-in-tabelle">Anzahlung in Tabelle anzeigen</label>
-            <select id="rechnung-anzahlung-in-tabelle">
-              <option value="ja" selected>Ja (als Verrechnung)</option>
-              <option value="nein">Nein</option>
-            </select>
-          </div>
-        </div>
-        <p class="hint">In der Rechnung erscheint die Anzahlung als Verrechnungsposition (negativ), damit sie nicht doppelt fällig wirkt.</p>
-      </div>
-    </div>
-
-    <div class="form-section items-section">
-      <h2>Positionen</h2>
-      <div id="rechnung-items"></div>
-      <button class="add-item-btn" onclick="addItem('rechnung')">+ Position hinzufügen</button>
-    </div>
-
-    <div class="form-section">
-      <h2>Zusätzliche Informationen</h2>
-      <div class="form-group">
-        <label for="rechnung-notizen">Anmerkungen / Hinweise</label>
-        <textarea id="rechnung-notizen"></textarea>
-      </div>
-    </div>
-
-    <div class="actions">
-      <button class="btn btn-primary" onclick="generatePreview('rechnung')">Vorschau anzeigen</button>
-      <button class="btn btn-secondary" onclick="printDocument()">Drucken / PDF</button>
-      <button class="btn btn-secondary" onclick="saveRechnungJsonLocally()">Rechnung speichern (JSON)</button>
-    </div>
-
-    <div id="rechnung-preview" class="preview"></div>
-  </div>
-
-  <!-- Buchungen -->
-  <div id="buchungen-panel" class="document-panel">
-    <div class="form-section">
-      <h2>Buchungen verwalten</h2>
-      <div class="info-box">
-        <div class="row">
-          <button class="btn btn-secondary" type="button" onclick="bookingCreateFromForm('confirmed')">Buchung speichern (bestätigt)</button>
-          <button class="btn btn-muted" type="button" onclick="bookingCreateFromForm('reserved')">Buchung speichern (reserviert)</button>
-        </div>
-
-        <div class="row" style="margin-top:10px;">
-          <div class="form-group">
-            <label for="booking-customer">Kunde / Name</label>
-            <input id="booking-customer" placeholder="z.B. Max Mustermann">
-          </div>
-          <div class="form-group">
-            <label for="booking-ref">Referenz (optional)</label>
-            <input id="booking-ref" placeholder="z.B. AB-2026-001 / A-2026-001">
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="form-group">
-            <label for="booking-start">Start</label>
-            <input type="datetime-local" id="booking-start">
-          </div>
-          <div class="form-group">
-            <label for="booking-end">Ende</label>
-            <input type="datetime-local" id="booking-end">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="booking-valid-until">Gültig bis (nur für reserviert, optional)</label>
-          <input type="date" id="booking-valid-until" placeholder="YYYY-MM-DD">
-        </div>
-
-        <div class="form-group">
-          <label for="booking-note">Notiz</label>
-          <textarea id="booking-note" placeholder="z.B. 4h Miete, Extras, etc."></textarea>
-        </div>
-
-        <div id="booking-msg" class="hint"></div>
-
-        <div class="row" style="margin-top:10px;">
-          <button class="btn btn-muted" type="button" onclick="bookingExportJson()">Export JSON</button>
-          
-                    <button class="btn btn-muted" type="button" onclick="exportPublicCalendarJson()">Öffentlichen Kalender exportieren (JSON)</button>
-                    <button class="btn btn-primary" type="button" onclick="syncPublicCalendarToSupabase()" style="background: #1D334A; color: white;">Kalender mit Supabase Syncen</button>
-
-          <label class="btn btn-muted" style="text-align:center; padding:15px 30px; border-radius:8px; cursor:pointer;">
-            Import JSON
-            <input id="booking-import-file" type="file" accept="application/json" style="display:none" onchange="bookingImportJson(event)">
-          </label>
-        </div>
-
-        <div class="row" style="margin-top:10px;">
-          <button class="btn btn-danger" type="button" onclick="bookingWipeAll()">ALLE Buchungen löschen</button>
-          <button class="btn btn-muted" type="button" onclick="bookingRefreshUI()">Liste aktualisieren</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <h2>Gespeicherte Buchungen</h2>
-      <div style="overflow:auto">
-        <table class="table-plain">
-          <thead>
-          <tr>
-            <th>Status</th>
-            <th>Zeitraum</th>
-            <th>Kunde</th>
-            <th>Ref / gültig bis</th>
-            <th>ID</th>
-            <th>Aktion</th>
-          </tr>
-          </thead>
-          <tbody id="booking-list"></tbody>
-        </table>
-      </div>
-      <p class="hint" style="margin-top:10px;">Nur „reserviert“ und „bestätigt“ blockieren die Verfügbarkeit.</p>
-    </div>
-  </div>
-
-
-  <!-- Kalender (Offline / Native) -->
-  <div id="kalender-panel" class="document-panel">
-    <div class="form-section">
-      <h2>Kalender (2026–2027)</h2>
-      <div class="info-box">
-
-        <div class="wmk-cal-topbar">
-          <div class="wmk-cal-views" role="tablist" aria-label="Kalenderansichten">
-            <button class="wmk-viewbtn active" type="button" data-view="month" onclick="WMK_CAL.setView('month')">Monat</button>
-            <button class="wmk-viewbtn" type="button" data-view="week" onclick="WMK_CAL.setView('week')">Woche</button>
-            <button class="wmk-viewbtn" type="button" data-view="day" onclick="WMK_CAL.setView('day')">Tag</button>
-            <button class="wmk-viewbtn" type="button" data-view="list" onclick="WMK_CAL.setView('list')">Liste</button>
-          </div>
-
-          <div class="wmk-cal-nav" aria-label="Navigation">
-            <button class="btn btn-muted" type="button" onclick="WMK_CAL.prev()">◀</button>
-            <button class="btn btn-muted" type="button" onclick="WMK_CAL.today()">Heute</button>
-            <button class="btn btn-muted" type="button" onclick="WMK_CAL.next()">▶</button>
-          </div>
-        </div>
-
-        <div class="wmk-cal-controls">
-          <div class="wmk-cal-toggles" aria-label="Kalenderfilter">
-            <label class="wmk-toggle" for="cal-show-reserved"><input type="checkbox" id="cal-show-reserved" checked> Reservierungen (Angebot)</label>
-            <label class="wmk-toggle" for="cal-show-confirmed"><input type="checkbox" id="cal-show-confirmed" checked> Buchungen (Auftragsbestätigung)</label>
-            <label class="wmk-toggle" for="cal-show-holidays"><input type="checkbox" id="cal-show-holidays" checked> Feiertage (MV)</label>
-            <label class="wmk-toggle" for="cal-show-seasons"><input type="checkbox" id="cal-show-seasons" checked> Saisonfarben</label>
-          </div>
-        </div>
-
-        <div class="calendar-legend hint" style="margin-top:10px;">
-          <span><span class="dot d-conf"></span>Buchung (bestätigt)</span>
-          <span><span class="dot d-res"></span>Reservierung (Angebot)</span>
-          <span style="margin-left:10px;color:#b71c1c;font-weight:900">Feiertage rot</span>
-          <span style="margin-left:10px">Hauptsaison blau / Nebensaison orange</span>
-        </div>
-
-        <div class="hint" style="margin-top:6px;">Klick auf „Reserv.“/„Buchung“ öffnet ein Popup (bei mehreren Einträgen zuerst eine Liste).</div>
-
-        <div id="wm-cal-native" class="wm-cal-native" aria-label="Kalender"></div>
-      </div>
-    </div>
-
-    <!-- Popup: Einzelbuchung -->
-    <div class="wm-modal" id="wm-modal">
-      <div class="wm-modal-card" role="dialog" aria-modal="true">
-        <div class="wm-modal-head">
-          <h3 id="wm-modal-title">Details</h3>
-          <button class="wm-modal-close" type="button" onclick="WMK_CAL.modalClose()">Schließen</button>
-        </div>
-        <div class="wm-modal-body">
-          <div class="wm-kv">
-            <div class="k">Status</div><div class="v" id="wm-modal-status"></div>
-            <div class="k">Zeitraum</div><div class="v" id="wm-modal-range"></div>
-            <div class="k">Kunde</div><div class="v" id="wm-modal-customer"></div>
-            <div class="k">Referenz</div><div class="v" id="wm-modal-ref"></div>
-            <div class="k">Notiz</div><div class="v" id="wm-modal-note"></div>
-            <div class="k">ID</div><div class="v mono" id="wm-modal-id"></div>
-          </div>
-
-          <div class="wm-modal-actions">
-            <button class="btn btn-muted" type="button" onclick="WMK_CAL.editInBuchungen()">Im Tab „Buchungen“ bearbeiten</button>
-            <button class="btn btn-secondary" type="button" onclick="WMK_CAL.setConfirmed()">Auf „bestätigt“ setzen</button>
-            <button class="btn btn-danger" type="button" onclick="WMK_CAL.cancelBooking()">Stornieren</button>
-            <button class="btn btn-danger" type="button" onclick="WMK_CAL.deleteBooking()">Löschen</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Popup: Mehrere Einträge an einem Tag -->
-    <div class="wm-modal" id="wm-day-modal">
-      <div class="wm-modal-card" role="dialog" aria-modal="true">
-        <div class="wm-modal-head">
-          <h3 id="wm-day-modal-title">Einträge</h3>
-          <button class="wm-modal-close" type="button" onclick="WMK_CAL.dayModalClose()">Schließen</button>
-        </div>
-        <div class="wm-modal-body">
-          <div class="hint" id="wm-day-modal-sub"></div>
-          <table class="wmk-list" style="margin-top:10px;">
-            <thead>
-              <tr>
-                <th>Status</th>
-                <th>Kunde</th>
-                <th>Zeitraum</th>
-                <th>Referenz</th>
-                <th>Aktionen</th>
-              </tr>
-            </thead>
-            <tbody id="wm-day-modal-body"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-</div>
+<!-- Turnstile Debug Callbacks -->
+<script>
+  window.wmTurnstileError = function(code){
+    console.warn("Turnstile error:", code);
+    const el = document.getElementById("err");
+    if (el) {
+      el.style.display = "block";
+      el.textContent = "Sicherheitsprüfung Fehler: " + code;
+    }
+  };
+  window.wmTurnstileExpired = function(){ console.warn("Turnstile expired"); };
+  window.wmTurnstileTimeout = function(){ console.warn("Turnstile timeout"); };
+</script>
 
 <script>
-// ===== HILFSFUNKTIONEN =====
-function escapeHtml(unsafe) {
-  if (unsafe == null) return '';
-  return String(unsafe)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+(() => {
+  const SEASON_START = "2026-04-01";
+  const LAT = 54.0924;
+  const LNG = 12.0991;
+  const HOURS_MIN = 9;
+  const HOURS_MAX = 18;
+  const TL_START_HOUR = HOURS_MIN;
+  const TL_END_HOUR = HOURS_MAX;
+  const RETURN_BUFFER_MIN = 30;
+  const PUBLIC_CAL_URL = '/kalender.json';
+  const BLOCK_STATUSES = new Set(["reserved","confirmed"]);
+  const WORKERURL = "https://reservierung-v2.kontakt-70d.workers.dev/";
 
-// 1. ZUERST DIE KONFIGURATION (Nur einmal!)
-var SUPABASE_URL = 'https://fnktiyujyznbbhwkeyww.supabase.co';
-var SUPABASE_ANON_KEY = 'sb_publishable_cJyOwgz2NXfDiTj7mRUVrQ_VMAMoVdd';
-let supabaseClient;
+  const dateEl = document.getElementById("date");
+  const pkgEl = document.getElementById("package");
+  const startEl = document.getElementById("start");
+  const errEl = document.getElementById("err");
+  const ctaEl = document.getElementById("cta");
+  const ctaStatusEl = document.getElementById("cta-status");
+  const selectedPillEl = document.getElementById("selected-pill");
+  const sunsetPillEl = document.getElementById("sunset-pill");
+  const nameEl = document.getElementById("name");
+  const emailEl = document.getElementById("email");
+  const phoneEl = document.getElementById("phone");
+  const messageEl = document.getElementById("message");
+  const privacyEl = document.getElementById("privacy");
+  const copyCustomerEl = document.getElementById("copyCustomer");
 
-var COMPANY = {
-  name: "CJ WARNOW MOMENTS UG (haftungsbeschränkt)",
-  address1: "Am Strande 18",
-  zipCity: "18055 Rostock",
-  phone: "0162 94 97 049",
-  email: "kontakt@warnowmoments.de",
-  logoUrl: "https://agi-prod-file-upload-public-main-use1.s3.amazonaws.com/fe4c6ab1-409f-4a2d-9916-e7b643290b02"
-};
+  const calPrevEl = document.getElementById("cal-prev");
+  const calNextEl = document.getElementById("cal-next");
+  const calTodayEl = document.getElementById("cal-today");
+  const calTitleEl = document.getElementById("cal-title");
+  const calGridEl = document.getElementById("cal-grid");
+  const calDayTitleEl = document.getElementById("cal-day-title");
+  const calSlotsEl = document.getElementById("cal-slots");
+  const calBlocksEl = document.getElementById("cal-blocks");
 
-var BANK = {
-  iban: "DE90 1001 0123 4116 6166 50",
-  bic: "QNTODEB2XXX",
-  bank: "Olinda Zweigniederlassung Deutschland",
-  kontoinhaber: "CJ WARNOW MOMENTS UG (haftungsbeschränkt)"
-};
+  const tlWrapEl = document.getElementById("cal-timeline-wrap");
+  const tlScaleEl = document.getElementById("cal-timeline-scale");
+  const tlBarEl = document.getElementById("cal-timeline-bar");
+  const tipEl = document.getElementById("tl-tip");
+  const tipCloseEl = document.getElementById("tl-tip-close");
+  const tipTitleEl = document.getElementById("tl-tip-title");
+  const tipTimeEl = document.getElementById("tl-tip-time");
+  const tipDurEl = document.getElementById("tl-tip-dur");
 
-var AGB = { url: "https://warnowmoments.de/AGB" };
+  let publicEvents = [];
+  let calCursor = new Date();
+  let calSelectedISO = null;
+  let lastPayload = null;
+  let holidayByYear = new Map();
 
-var BOOKING = {
-  STORAGE_KEY: "wm_bookings_v1",
-  RESOURCE_ID: "floss_1",
-  REQUIRE_FOR_OFFER: true,
-  EXPIRE_RESERVED_BY_OFFER_VALID_UNTIL: true,
-  REQUIRE_OFFER_VALID_UNTIL_FOR_RESERVATION: true
-};
+  const HOLIDAY_COUNTRY = "DE";
+  const HOLIDAY_COUNTY = "DE-MV";
+  const HOLIDAY_API_BASE = "https://date.nager.at/api/v3/PublicHolidays";
 
-var DEPOSIT_RATE = 1 / 3;
-var OFFER_DEFAULT_START_TIME = "10:00";
-var OFFER_DEFAULT_END_TIME   = "18:00";
-var abDepositAuto = true;
+  function pad2(n){ return String(n).padStart(2,"0"); }
+  function fmtTime(h){ return `${pad2(h)}:00`; }
+  function setError(msg){ errEl.style.display = msg ? "block" : "none"; errEl.textContent = msg || ""; }
+  function setCtaStatus(msg){ if(ctaStatusEl) ctaStatusEl.textContent = msg || ""; }
+  function rangesOverlap(aStart,aEnd,bStart,bEnd){ return aStart < bEnd && bStart < aEnd; }
 
-// 2. DIE FUNKTIONEN
-
-
-// ===== HILFSFUNKTIONEN =====
-function escapeHtml(unsafe) {
-    if (unsafe == null) return "";
-    return String(unsafe).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-}
-
-async function logout() {
-    if (!confirm('Möchtest du dich wirklich abmelden?')) return;
-    try {
-        if (typeof supabase !== 'undefined' && supabase.auth) await supabase.auth.signOut();
-        localStorage.removeItem('supabase.auth.token');
-        sessionStorage.clear();
-        window.location.href = 'login.html';
-    } catch (error) {
-        window.location.href = 'login.html';
-    }
-}
-
-
-function renderCalendarSafe() {
-  try { if (typeof WMKCAL !== "undefined" && typeof WMKCAL.render === "function") WMKCAL.render(); } catch(e) {}
-  try { if (typeof WMK_CAL !== "undefined" && typeof WMK_CAL.render === "function") WMK_CAL.render(); } catch(e) {}
-}
-
-function bookingRefreshUI() {
-  renderCalendarSafe();
-    console.log('Buchungen UI refreshed');
-}
-
-// ===== START BEI LOAD =====
-
-
-/** =========================
- * BUCHUNGEN KONFIGURATION
- * ========================= */
-var BOOKING = {
-  STORAGE_KEY: "wm_bookings_v1",
-  RESOURCE_ID: "floss_1",
-  REQUIRE_FOR_OFFER: true,
-  EXPIRE_RESERVED_BY_OFFER_VALID_UNTIL: true,
-  REQUIRE_OFFER_VALID_UNTIL_FOR_RESERVATION: true
-};
-
-var DEPOSIT_RATE = 1 / 3;
-var OFFER_DEFAULT_START_TIME = "10:00";
-var OFFER_DEFAULT_END_TIME   = "18:00";
-var abDepositAuto = true;
-
-/** =========================
- * ZENTRALE INIT-FUNKTION (Nur diese eine!)
- * ========================= */
-/** =========================
- * ZENTRALE TAB-STEUERUNG
- * ========================= */
-function switchTab(clickedElement, targetId) {
-    // 1. Alle Panels verstecken
-    document.querySelectorAll('.document-panel').forEach(el => {
-        el.style.display = 'none';
-        el.classList.remove('active');
-    });
-    
-    // 2. Alle Tab-Buttons deaktivieren
-    document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
-    
-    // 3. Das richtige Panel anzeigen
-    const target = document.getElementById(targetId);
-    if (target) {
-        target.style.display = 'block';
-        target.classList.add('active');
-    }
-    
-    // 4. Den Button optisch aktivieren
-    if (clickedElement && clickedElement.classList) {
-        clickedElement.classList.add('active');
-    }
-
-    // Spezial-Logik für Kalender-Refresh
-    if (targetId === 'buchungen-panel' && typeof bookingRefreshUI === 'function') {
-        bookingRefreshUI();
-    }
-    if (targetId === 'kalender-panel' && typeof WMK_CAL !== 'undefined') {
-        setTimeout(() => WMK_CAL.render(), 100);
-    }
-}
-
-// Den Event-Listener ganz unten lassen:
-
-
-var DEPOSIT_RATE = 1 / 3;
-
-// Angebot: Standard-Uhrzeiten (nur wenn Start/Ende noch leer ist)
-var OFFER_DEFAULT_START_TIME = "10:00";
-var OFFER_DEFAULT_END_TIME   = "18:00";
-var abDepositAuto = true;
-
-/** =========================
- *  BUCHUNGEN (localStorage)
- *  ========================= */
-function bookingUid() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-
-async function bookingSaveAll(arr) {
-  localStorage.setItem(BOOKING.STORAGE_KEY, JSON.stringify(arr));
-  if (typeof sb !== 'undefined' && sb) {
-      try {
-          const bookings = arr.map(b => ({
-            id: String(b.id),
-            created_at: new Date(b.createdAt || Date.now()).toISOString(),
-            customer: String(b.customer || ''),
-            ref: String(b.ref || ''),
-            start_time: b.startMs ? new Date(b.startMs).toISOString() : null,
-            end_time: b.endMs ? new Date(b.endMs).toISOString() : null,
-            status: String(b.status || 'reserved'),
-            note: String(b.note || '')
-          }));
-          const { error } = await sb.from('wm_bookings').upsert(bookings);
-          if (error) { 
-            console.error('Supabase save error wm_bookings:', error); 
-            alert("Fehler beim Speichern in wm_bookings: " + error.message);
-          } else { 
-            console.log('Saved to wm_bookings:', bookings.length); 
-            await savePublicCalendarToSupabase();
-          }
-      } catch (e) { 
-        console.error('Supabase write error:', e); 
-        alert("Unerwarteter Supabase Fehler bei wm_bookings.");
-      }
+  function calToISODate(d){
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,"0");
+    const dd = String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${dd}`;
   }
-}
 
+  function fmtHM(ms){ return new Date(ms).toLocaleTimeString("de-DE", { hour:"2-digit", minute:"2-digit" }); }
+  function fmtDuration(ms){
+    const totalMin = Math.max(0, Math.round(ms / 60000));
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    if(m === 0) return `${h}h`;
+    return `${h}h ${m}min`;
+  }
+  function escapeText(s){ return String(s || "").replace(/\s+/g, " ").trim(); }
 
-async function savePublicCalendarToSupabase() {
-  if (typeof sb === 'undefined' || !sb) return;
-  const all = bookingLoadAll();
+  async function getTodayISO(){
+    const today = calToISODate(new Date());
+    if (today < SEASON_START) return SEASON_START;
+    return today;
+  }
 
-  // Wir filtern nur die blockierenden Termine
-  const activeEvents = all
-    .filter(b => b && b.resourceId === BOOKING.RESOURCE_ID)
-    .filter(b => b.status === "confirmed" || b.status === "reserved");
+  async function setTodayDate(){
+    try {
+      const startISO = await getTodayISO();
+      dateEl.value = startISO;
+      calSelectedISO = startISO;
+    } catch(e) {}
+  }
 
-  const payloadArray = activeEvents.map(b => {
-      const isConf = b.status === "confirmed";
-      return {
-          id: b.id, // Nutzen die Booking-ID auch als Primary Key für den Kalender
-          booking_id: b.id,
-          start_time: b.startMs ? new Date(b.startMs).toISOString() : null,
-          end_time: b.endMs ? new Date(b.endMs).toISOString() : null,
-          status: b.status,
-          title: isConf ? "Gebucht" : "Reserviert"
-      };
+  async function loadPublicCalendar(){
+    try{
+      const res = await fetch(PUBLIC_CAL_URL, { cache: "no-store" });
+      if(!res.ok) throw new Error("fetch failed");
+      const data = await res.json();
+      const ev = Array.isArray(data?.events) ? data.events : [];
+      publicEvents = ev
+        .filter(e => e && BLOCK_STATUSES.has(String(e.status)))
+        .map(e => ({ status: String(e.status), startMs: new Date(e.start).getTime(), endMs: new Date(e.end).getTime() }))
+        .filter(e => Number.isFinite(e.startMs) && Number.isFinite(e.endMs) && e.endMs > e.startMs);
+    } catch(e){ publicEvents = []; }
+  }
+
+  function holidayAppliesToMV(h){
+    if(!h) return false;
+    if(h.global === true) return true;
+    if(Array.isArray(h.counties) && h.counties.includes(HOLIDAY_COUNTY)) return true;
+    return false;
+  }
+
+  async function loadHolidaysForYear(year){
+    if(holidayByYear.has(year)) return;
+    try{
+      const res = await fetch(`${HOLIDAY_API_BASE}/${year}/${HOLIDAY_COUNTRY}`, { cache: "force-cache" });
+      if(!res.ok) throw new Error();
+      const data = await res.json();
+      const map = new Map();
+      if(Array.isArray(data)){
+        for(const h of data){
+          if(!holidayAppliesToMV(h)) continue;
+          const iso = String(h.date || "").slice(0,10);
+          const name = String(h.localName || h.name || "").trim();
+          if(iso && name) map.set(iso, name);
+        }
+      }
+      holidayByYear.set(year, map);
+    } catch(e){ holidayByYear.set(year, new Map()); }
+  }
+
+  function getSunsetRostock(dateISO) {
+    const d = new Date(dateISO + "T12:00:00Z");
+    const startOfYear = new Date(Date.UTC(d.getUTCFullYear(), 0, 0));
+    const diff = d - startOfYear;
+    const dayOfYear = Math.floor(diff / 86400000);
+
+    const lat = 54.0924;
+    const lng = 12.0991;
+
+    const gamma = (2 * Math.PI / 365) * (dayOfYear - 1 + (12 - 12) / 24);
+    const eqTime = 229.18 * (0.000075 + 0.001868 * Math.cos(gamma) - 0.032077 * Math.sin(gamma) - 0.014615 * Math.cos(2 * gamma) - 0.040849 * Math.sin(2 * gamma));
+    const decl = 0.006918 - 0.399912 * Math.cos(gamma) + 0.070257 * Math.sin(gamma) - 0.006758 * Math.cos(2 * gamma) + 0.000907 * Math.sin(2 * gamma) - 0.002697 * Math.cos(3 * gamma) + 0.00148 * Math.sin(3 * gamma);
+
+    const zenith = 90.833 * (Math.PI / 180);
+    const latRad = lat * (Math.PI / 180);
+    let haArg = (Math.cos(zenith) - (Math.sin(latRad) * Math.sin(decl))) / (Math.cos(latRad) * Math.cos(decl));
+    haArg = Math.max(-1, Math.min(1, haArg));
+    const ha = Math.acos(haArg);
+
+    const sunsetUTCMinutes = 720 - 4 * lng - eqTime + (ha * 180 / Math.PI) * 4;
+
+    const sunsetDate = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0));
+    sunsetDate.setUTCMinutes(sunsetUTCMinutes);
+    return sunsetDate;
+  }
+
+  function floorToFullHour(ts){
+    const d = new Date(ts);
+    d.setMinutes(0,0,0);
+    return d.getTime();
+  }
+
+  function computeAllowedStartHours(dateISO, sunsetLocal, durationHours){
+    const lastStartTsExact = sunsetLocal.getTime() - (durationHours*60 + RETURN_BUFFER_MIN) * 60 * 1000;
+    const lastStartTsHour = floorToFullHour(lastStartTsExact);
+    const allowed = [];
+    for(let h=HOURS_MIN; h<=HOURS_MAX; h++){
+      const candidate = new Date(dateISO + "T00:00:00");
+      candidate.setHours(h,0,0,0);
+      if(candidate.getTime() <= lastStartTsHour) allowed.push(h);
+    }
+    return { allowed, lastStartTsHour };
+  }
+
+  function isBlockedByPublicEvents(startMs, endMs){
+    for(const e of publicEvents){
+      if(rangesOverlap(startMs, endMs, e.startMs, e.endMs)) return true;
+    }
+    return false;
+  }
+
+  function filterByBookings(dateISO, durationHours, hours){
+    const ok = [];
+    for(const h of hours){
+      const start = new Date(dateISO + "T00:00:00");
+      start.setHours(h,0,0,0);
+      const startMs = start.getTime();
+      const endMs = startMs + durationHours*60*60*1000;
+      if(!isBlockedByPublicEvents(startMs, endMs)) ok.push(h);
+    }
+    return ok;
+  }
+
+  function updateSlotButtonVisuals() {
+    const current = startEl.value;
+    if(!calSlotsEl) return;
+    Array.from(calSlotsEl.children).forEach(btn => {
+      if(btn.textContent === current) btn.classList.add("selected-slot");
+      else btn.classList.remove("selected-slot");
+    });
+  }
+
+  function setStartOptions(hours, preferredValue){
+    startEl.innerHTML = "";
+    if(!hours.length){
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "Keine Startzeit verfügbar";
+      startEl.appendChild(opt);
+      startEl.disabled = true;
+      updateSlotButtonVisuals();
+      return;
+    }
+    startEl.disabled = false;
+    for(const h of hours){
+      const v = fmtTime(h);
+      const opt = document.createElement("option");
+      opt.value = v;
+      opt.textContent = v;
+      startEl.appendChild(opt);
+    }
+    const canUsePreferred = preferredValue && [...startEl.options].some(o => o.value === preferredValue);
+    startEl.value = canUsePreferred ? preferredValue : startEl.options[0].value;
+    updateSlotButtonVisuals();
+  }
+
+  function updateCtas(){
+    const dateISO = dateEl.value;
+    const pkgLabel = pkgEl.options[pkgEl.selectedIndex]?.textContent || "";
+    const startVal = startEl.value || "";
+    if(!dateISO || !startVal || startEl.disabled){
+      selectedPillEl.textContent = "Auswahl: –";
+      lastPayload = null;
+      return;
+    }
+    const wantsCopy = copyCustomerEl?.checked ? "Ja" : "Nein";
+    lastPayload = {
+      SQF_name: escapeText(nameEl?.value),
+      SQF_email: escapeText(emailEl?.value),
+      SQF_phone: escapeText(phoneEl?.value),
+      SQF_message: escapeText(messageEl?.value),
+      SQF_date: dateISO,
+      SQF_start: startVal,
+      SQF_paket: pkgLabel,
+      SQF_copyToCustomer: wantsCopy,
+      date: dateISO, start: startVal, paket: pkgLabel, source: "wm-pages", page: location.href
+    };
+    selectedPillEl.textContent = `Auswahl: ${dateISO} • ${pkgLabel} • ${startVal}`;
+  }
+
+  async function refresh(){
+    setError(""); sunsetPillEl.textContent = ""; setCtaStatus("");
+    const dateISO = dateEl.value; const duration = Number(pkgEl.value);
+    if(!dateISO){ setStartOptions([], ""); updateCtas(); return; }
+    try{
+      const sunset = getSunsetRostock(dateISO);
+      const previouslySelected = startEl.value;
+      const { allowed } = computeAllowedStartHours(dateISO, sunset, duration);
+      const filtered = filterByBookings(dateISO, duration, allowed);
+      setStartOptions(filtered, previouslySelected);
+      sunsetPillEl.textContent = `Sonnenuntergang: ca. ${sunset.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr`;
+      updateCtas();
+    } catch(e){ setStartOptions([], ""); updateCtas(); }
+  }
+
+  function validateRequiredFields(){
+    let isValid = true; let firstErrorEl = null;
+    [nameEl, emailEl, phoneEl, dateEl, pkgEl].forEach(el => { if(el) el.classList.remove("input-error"); });
+    privacyEl.style.outline = "none";
+
+    const checkField = (el, condition, msg) => {
+      if(!el) return;
+      if(!condition){
+        el.classList.add("input-error");
+        if(!firstErrorEl) { firstErrorEl = el; setError(msg); }
+        isValid = false;
+      }
+    };
+
+    checkField(nameEl, nameEl.value.trim() !== "", "Bitte Name eingeben.");
+    checkField(emailEl, emailEl.value.includes("@") && emailEl.value.includes("."), "Bitte gültige E-Mail eingeben.");
+    checkField(phoneEl, phoneEl.value.trim() !== "", "Bitte Telefonnummer eingeben.");
+    checkField(dateEl, dateEl.value !== "", "Bitte ein Datum im Kalender auswählen.");
+
+    if(startEl && startEl.disabled) {
+      if(!firstErrorEl) { firstErrorEl = pkgEl; setError("An diesem Tag ist leider keine Zeit für das Paket mehr frei."); }
+      isValid = false;
+    }
+
+    if(!privacyEl.checked) {
+      privacyEl.style.outline = "2px solid var(--c-error)";
+      privacyEl.style.outlineOffset = "2px";
+      if(!firstErrorEl) { firstErrorEl = privacyEl; setError("Bitte stimmen Sie der Datenschutzerklärung zu."); }
+      isValid = false;
+    }
+
+    if(!isValid && firstErrorEl) { firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); firstErrorEl.focus(); }
+    else { setError(""); }
+    return isValid;
+  }
+
+  [nameEl, emailEl, phoneEl].forEach(el => {
+    el?.addEventListener("input", () => {
+      el.classList.remove("input-error");
+      if(errEl.style.display === "block") setError("");
+    });
   });
+  privacyEl?.addEventListener("change", () => {
+    privacyEl.style.outline = "none";
+    if(errEl.style.display === "block") setError("");
+  });
+  copyCustomerEl?.addEventListener("change", updateCtas);
 
-  try {
-      // 1. Zuerst alle alten Einträge für dieses Floß löschen (so verschwinden auch stornierte Termine sauber)
-      // Alternativ können wir auch upsert nutzen, aber dann bleiben stornierte als Geister im Kalender.
-      // Da wir aber ggf. keine kompletten Deletes machen wollen, überschreiben wir einfach alle mit Upsert 
-      // und für die gecancelten updaten wir den Status auf "cancelled", damit die Website sie ignorieren kann.
+  function getTurnstileToken(){
+    try {
+      if (!window.turnstile || typeof window.turnstile.getResponse !== "function") return "";
+      return window.turnstile.getResponse() || "";
+    } catch(e) {
+      return "";
+    }
+  }
 
-      const allEventsToSync = all.filter(b => b && b.resourceId === BOOKING.RESOURCE_ID).map(b => {
-          const isConf = b.status === "confirmed";
-          let title = "Reserviert";
-          if (b.status === "confirmed") title = "Gebucht";
-          if (b.status === "cancelled") title = "Storniert";
+  function resetTurnstile(){
+    try {
+      if (window.turnstile && typeof window.turnstile.reset === "function") window.turnstile.reset();
+    } catch(e) {}
+  }
 
-          return {
-              id: b.id, 
-              booking_id: b.id,
-              start_time: b.startMs ? new Date(b.startMs).toISOString() : null,
-              end_time: b.endMs ? new Date(b.endMs).toISOString() : null,
-              status: b.status,
-              title: title
-          };
+  async function submitReservation(){
+    if(!validateRequiredFields()) return;
+    updateCtas();
+    if(!lastPayload) { setError("Bitte zuerst Datum/Startzeit wählen."); return; }
+
+    const token = getTurnstileToken();
+    if(!token){
+      setError("Bitte Sicherheitsprüfung abschließen.");
+      return;
+    }
+
+    const payload = { ...lastPayload, turnstileToken: token };
+
+    const oldText = ctaEl.textContent;
+    ctaEl.disabled = true; ctaEl.textContent = "Wird gesendet…"; setCtaStatus("");
+    try{
+      const res = await fetch(WORKERURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
       });
 
-      if (allEventsToSync.length > 0) {
-          const { error } = await sb.from('wm_public_calendar').upsert(allEventsToSync);
-          if (error) {
-              console.error("Fehler beim Speichern des öffentlichen Kalenders:", error);
-              alert("Fehler in wm_public_calendar: " + error.message);
-          } else {
-              console.log("wm_public_calendar synchronisiert.");
-          }
+      if(res.ok){
+        ctaEl.textContent = "Erfolgreich gesendet ✓";
+        setCtaStatus("Vielen Dank! Ihre Anfrage wurde versendet.");
+        nameEl.value = ""; emailEl.value = ""; phoneEl.value = ""; messageEl.value = "";
+        privacyEl.checked = false; copyCustomerEl.checked = false;
+
+        resetTurnstile();
+
+        setTimeout(() => { ctaEl.textContent = oldText; }, 4000);
+        return;
       }
-  } catch(e) {
-      console.error("Exception wm_public_calendar:", e);
+
+      resetTurnstile();
+      throw new Error("Serverfehler");
+    } catch(e){
+      setError("Senden fehlgeschlagen. Bitte nutzen Sie unser Kontaktformular.");
+      ctaEl.textContent = oldText;
+    } finally {
+      ctaEl.disabled = false;
+    }
   }
-}
 
+  function isAllDayLike(startMs, endMs){
+    const s = new Date(startMs); const e = new Date(endMs);
+    return s.getHours() === 0 && s.getMinutes() === 0 && (e.getHours() === 23 && (e.getMinutes() === 59 || e.getMinutes() === 0));
+  }
 
+  function getBlocksForDay(dayISO){
+    const dayStart = new Date(dayISO + "T00:00:00").getTime(), dayEnd = new Date(dayISO + "T23:59:59").getTime();
+    return publicEvents
+      .filter(e => rangesOverlap(dayStart, dayEnd, e.startMs, e.endMs))
+      .map(e => ({ status: e.status, startMs: Math.max(e.startMs, dayStart), endMs: Math.min(e.endMs, dayEnd) }))
+      .sort((a,b) => a.startMs - b.startMs);
+  }
 
-function bookingExpireReservationsOnArray(arr) {
-  if (!BOOKING.EXPIRE_RESERVED_BY_OFFER_VALID_UNTIL) return { arr, changed: false };
+  function renderBlocksList(dayISO){
+    const blocks = getBlocksForDay(dayISO);
+    calBlocksEl.innerHTML = "";
+    if(!blocks.length){ return; }
+    for(const b of blocks){
+      const row = document.createElement("div");
+      row.className = "muted";
+      row.style.fontWeight = "800";
+      row.style.marginTop = "6px";
+      row.style.fontSize = "13px";
+      const label = b.status === "confirmed" ? "Gebucht" : "Reserviert";
+      const allDay = isAllDayLike(b.startMs, b.endMs);
+      const dur = fmtDuration(b.endMs - b.startMs);
+      row.textContent = allDay ? `${label}: Ganztag (${dur})` : `${label}: ${fmtHM(b.startMs)}–${fmtHM(b.endMs)} (${dur})`;
+      calBlocksEl.appendChild(row);
+    }
+  }
 
-  const now = Date.now();
-  let changed = false;
+  function tipClose(){ tipEl?.classList.remove("open"); tipEl?.removeAttribute("data-pinned"); }
+  function tipOpenAt(x, y, title, timeText, durText, pin){
+    if(!tipEl) return;
+    tipTitleEl.textContent = title; tipTimeEl.textContent = timeText; tipDurEl.textContent = durText;
+    const barRect = tlBarEl.getBoundingClientRect();
+    let left = Math.max(8, Math.min(x - barRect.left + 10, barRect.width - 20));
+    let top = Math.max(8, Math.min(y - barRect.top + 16, barRect.height + 10));
+    tipEl.style.left = left + "px";
+    tipEl.style.top = top + "px";
+    tipEl.classList.add("open");
+    if(pin) tipEl.setAttribute("data-pinned","1"); else tipEl.removeAttribute("data-pinned");
+  }
 
-  const out = arr.map(b => {
-    if (!b) return b;
-    if (b.resourceId !== BOOKING.RESOURCE_ID) return b;
+  function renderTimeline(dayISO){
+    const blocks = getBlocksForDay(dayISO);
+    tlScaleEl.innerHTML = "";
+    [TL_START_HOUR, TL_START_HOUR+3, TL_START_HOUR+6, TL_END_HOUR].forEach(h => {
+      const sp = document.createElement("span");
+      sp.textContent = `${pad2(h)}:00`;
+      tlScaleEl.appendChild(sp);
+    });
+    tlBarEl.querySelectorAll(".tl-block").forEach(n => n.remove());
+    tipClose();
 
-    if (b.status === "reserved") {
-      const validUntilMs = Number(b.validUntilMs);
-      if (isFinite(validUntilMs) && validUntilMs > 0 && now > validUntilMs) {
-        changed = true;
-        const note = String(b.note || "");
-        const suffix = note.includes("Automatisch abgelaufen")
-          ? note
-          : (note ? (note + "\n") : "") + "Automatisch abgelaufen: Angebotsfrist überschritten.";
-        return { ...b, status: "cancelled", note: suffix, updatedAt: Date.now() };
+    const rangeStart = new Date(dayISO + "T00:00:00").setHours(TL_START_HOUR,0,0,0);
+    const rangeEnd = new Date(dayISO + "T00:00:00").setHours(TL_END_HOUR,0,0,0);
+    const range = Math.max(1, rangeEnd - rangeStart);
+    tlWrapEl.style.display = "block";
+    blocks.forEach(b => {
+      const s = Math.max(b.startMs, rangeStart);
+      const e = Math.min(b.endMs, rangeEnd);
+      if(e <= s) return;
+      const div = document.createElement("div");
+      div.className = "tl-block " + (b.status === "confirmed" ? "conf" : "res");
+      div.style.left = `${((s - rangeStart) / range) * 100}%`;
+      div.style.width = `${Math.max(0.8, ((e - s) / range) * 100)}%`;
+
+      const label = b.status === "confirmed" ? "Gebucht" : "Reserviert";
+      const timeText = `${fmtHM(b.startMs)}–${fmtHM(b.endMs)}`;
+      const durText = `Dauer: ${fmtDuration(b.endMs - b.startMs)}`;
+
+      div.addEventListener("mousemove", (ev) => { if(tipEl?.getAttribute("data-pinned") !== "1") tipOpenAt(ev.clientX, ev.clientY, label, timeText, durText, false); });
+      div.addEventListener("mouseleave", () => { if(tipEl?.getAttribute("data-pinned") !== "1") tipClose(); });
+      div.addEventListener("click", (ev) => { ev.stopPropagation(); tipOpenAt(ev.clientX, ev.clientY, label, timeText, durText, true); });
+      tlBarEl.appendChild(div);
+    });
+  }
+
+  function countBlocksOnDay(iso){
+    const aStart = new Date(iso + "T00:00:00").getTime(), aEnd = new Date(iso + "T23:59:59").getTime();
+    let reserved = 0, confirmed = 0;
+    for(const e of publicEvents){
+      if(rangesOverlap(aStart, aEnd, e.startMs, e.endMs)){
+        if(e.status === "confirmed") confirmed++;
+        else if(e.status === "reserved") reserved++;
       }
     }
-    return b;
-  });
-
-  return { arr: out, changed };
-}
-
-function bookingLoadAll() {
-  try {
-    const raw = localStorage.getItem(BOOKING.STORAGE_KEY) || "[]";
-    const arr = JSON.parse(raw);
-    let safe = Array.isArray(arr) ? arr : [];
-
-    // MIGRATION: Convert any non-UUID ids to proper UUIDs so Supabase doesn't crash forever
-    let migrated = false;
-    safe = safe.map(b => {
-      if (b && b.id && !b.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)) {
-        migrated = true;
-        b.id = bookingUid(); 
-      }
-      return b;
-    });
-
-    const res = bookingExpireReservationsOnArray(safe);
-    if (res.changed || migrated) bookingSaveAll(res.arr);
-    return res.arr;
-  } catch {
-    return [];
-  }
-}
-
-function bookingIsBlockingStatus(status) {
-  return status === "confirmed" || status === "reserved";
-}
-function rangesOverlap(aStart, aEnd, bStart, bEnd) {
-  return aStart < bEnd && bStart < aEnd;
-}
-function bookingConflicts(startMs, endMs, ignoreId = null) {
-  const all = bookingLoadAll();
-  return all.filter(b => {
-    if (!b) return false;
-    if (ignoreId && b.id === ignoreId) return false;
-    if (b.resourceId !== BOOKING.RESOURCE_ID) return false;
-    if (!bookingIsBlockingStatus(b.status)) return false;
-    return rangesOverlap(startMs, endMs, Number(b.startMs), Number(b.endMs));
-  });
-}
-function bookingUpsert(obj) {
-  const all = bookingLoadAll();
-  const idx = all.findIndex(x => x.id === obj.id);
-  if (idx >= 0) all[idx] = { ...all[idx], ...obj, updatedAt: Date.now() };
-  else all.push({ ...obj, createdAt: Date.now(), updatedAt: Date.now() });
-  bookingSaveAll(all);
-}
-function bookingSetStatus(id, status, refOptional = "") {
-  const all = bookingLoadAll();
-  const idx = all.findIndex(x => x.id === id);
-  if (idx < 0) return false;
-  all[idx].status = status;
-  if (refOptional) all[idx].ref = refOptional;
-  all[idx].updatedAt = Date.now();
-  bookingSaveAll(all);
-  return true;
-}
-function bookingDelete(id) {
-  bookingSaveAll(bookingLoadAll().filter(b => b.id !== id));
-}
-function bookingFindById(id) {
-  if (!id) return null;
-  return bookingLoadAll().find(b => b.id === id) || null;
-}
-
-/** =========================
- *  DATE HELPERS
- *  ========================= */
-function dtLocalToDate(value) {
-  if (!value) return null;
-  const parts = String(value).split("T");
-  if (parts.length !== 2) return null;
-  const [y, m, d] = parts[0].split("-").map(Number);
-  const [hh, mm] = parts[1].split(":").map(Number);
-  if (!y || !m || !d) return null;
-  return new Date(y, (m - 1), d, hh || 0, mm || 0, 0, 0);
-}
-function isoDateEndOfDayMs(isoDate) {
-  if (!isoDate) return null;
-  const [y, m, d] = String(isoDate).split("-").map(Number);
-  if (!y || !m || !d) return null;
-  return new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
-}
-function fmtDT(ms) {
-  const d = new Date(ms);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleString("de-DE", { year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" });
-}
-
-/** =========================
- *  STANDARD-TEXTE
- *  ========================= */
-function defaultTextAngebot() {
-  return `Für Rückfragen stehen wir Ihnen jederzeit gerne zur Verfügung. Wir freuen uns auf Ihre Rückmeldung.
-
-Dieses Angebot ist freibleibend und unverbindlich. Eine Beauftragung kommt erst durch Ihre schriftliche Bestätigung (z.B. per E-Mail) zustande.
-
-Es gelten unsere Allgemeinen Geschäftsbedingungen (AGB). Diese sind abrufbar unter: ${AGB.url}
-Alternativ senden wir Ihnen unsere AGB auf Wunsch gerne zu.`;
-}
-function defaultTextAuftragsbestaetigung() {
-  return `Vielen Dank für Ihren Auftrag.
-Hiermit bestätigen wir die Beauftragung zu den nachfolgenden Konditionen.
-
-Es gelten unsere Allgemeinen Geschäftsbedingungen (AGB) in der bei Vertragsschluss einbezogenen Fassung (abrufbar unter: ${AGB.url}).`;
-}
-function defaultTextRechnung() {
-  return `Wir bedanken uns herzlich für Ihr Vertrauen und die angenehme Zusammenarbeit.
-Sollten Sie mit unserem Eventfloß-Erlebnis zufrieden gewesen sein, freuen wir uns sehr über eine positive Bewertung bei Google sowie Ihre Weiterempfehlung.`;
-}
-
-/** =========================
- *  BANK + MONEY
- *  ========================= */
-function bankBlockHtml() {
-  return `
-<p style="white-space: pre-line;">
-Kontoinhaber: ${escapeHtml(BANK.kontoinhaber)}
-IBAN: ${escapeHtml(BANK.iban)}
-BIC: ${escapeHtml(BANK.bic)}
-Bank: ${escapeHtml(BANK.bank)}
-</p>`;
-}
-function formatMoney(n) {
-  const x = Number(n);
-  if (!isFinite(x)) return "0.00";
-  return x.toFixed(2);
-}
-function moneySpan(amount, bold=false) {
-  const val = formatMoney(amount);
-  if (bold) return `<span class="money"><strong>${val}&nbsp;€</strong></span>`;
-  return `<span class="money">${val}&nbsp;€</span>`;
-}
-
-/** =========================
- *  INIT
- *  ========================= */
-document.addEventListener("DOMContentLoaded", function() {
-  const today = new Date().toISOString().split("T")[0];
-
-  setIfExists("angebot-datum", today);
-  setIfExists("auftragsbestaetigung-datum", today);
-  setIfExists("rechnung-datum", today);
-
-  setTextareaIfEmpty("angebot-notizen", defaultTextAngebot());
-  setTextareaIfEmpty("auftragsbestaetigung-notizen", defaultTextAuftragsbestaetigung());
-  setTextareaIfEmpty("rechnung-notizen", defaultTextRechnung());
-
-  addItem("angebot");
-  addItem("rechnung");
-
-  bookingRefreshUI();
-  updateOfferBookingCheck(false);
-
-  const s = document.getElementById("angebot-booking-start");
-  const e = document.getElementById("angebot-booking-end");
-  if (s) s.addEventListener("input", () => updateOfferBookingCheck(false));
-  if (e) e.addEventListener("input", () => updateOfferBookingCheck(false));
-  const ld = document.getElementById("angebot-leistung");
-  if (ld) ld.addEventListener("change", () => offerSyncBookingDateFromLeistung({force:true}));
-  // Falls Leistungsdatum schon gesetzt ist: Start/Ende einmalig vorbelegen (Zeiten bleiben anpassbar)
-  try { offerSyncBookingDateFromLeistung({force:false}); } catch (e) {}
-
-
-  const rDatum = document.getElementById("rechnung-datum");
-  const rFaellig = document.getElementById("rechnung-faellig");
-  if (rDatum && rFaellig) {
-    rFaellig.value = addDaysToISODate(rDatum.value || today, 14);
-    rDatum.addEventListener("change", function() {
-      if (this.value) rFaellig.value = addDaysToISODate(this.value, 14);
-    });
+    return { reserved, confirmed };
   }
 
-  const abDatum = document.getElementById("auftragsbestaetigung-datum");
-  const abFaellig = document.getElementById("auftragsbestaetigung-anzahlung-faellig");
-  if (abDatum && abFaellig) {
-    abFaellig.value = addDaysToISODate(abDatum.value || today, 14);
-    abDatum.addEventListener("change", function() {
-      if (this.value) abFaellig.value = addDaysToISODate(this.value, 14);
-    });
-  }
-
-  const abDep = document.getElementById("auftragsbestaetigung-anzahlung-betrag");
-  if (abDep) abDep.addEventListener("input", () => { abDepositAuto = false; });
-
-  const abItems = document.getElementById("auftragsbestaetigung-items");
-  if (abItems) {
-    abItems.addEventListener("input", (ev) => {
-      if (!abDepositAuto) return;
-      const id = ev && ev.target ? ev.target.id : "";
-      if (id === "auftragsbestaetigung-qty-0" || id === "auftragsbestaetigung-price-0" || id === "auftragsbestaetigung-tax-0") {
-        applyAutoDepositFromAbFirstRow();
-      }
-    });
-  }
-});
-
-function setIfExists(id, value) {
-  const el = document.getElementById(id);
-  if (el) el.value = value;
-}
-function setTextareaIfEmpty(id, value) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  if (!String(el.value || "").trim()) el.value = value;
-}
-function addDaysToISODate(isoDate, days) {
-  const d = new Date(isoDate);
-  if (isNaN(d.getTime())) return "";
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split("T")[0];
-}
-
-/** =========================
- *  TABS
- *  ========================= */
-function switchTab(type, ev) {
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  if (ev && ev.target) ev.target.classList.add("active");
-
-  document.querySelectorAll(".document-panel").forEach(p => p.classList.remove("active"));
-  const panel = document.getElementById(type + "-panel");
-  if (panel) panel.classList.add("active");
-
-  if (type === "buchungen") bookingRefreshUI();
-  if (type === "kalender") { setTimeout(() => { try { WMK_CAL.render(); } catch(e) {} }, 0); }
-}
-
-/** =========================
- *  ITEMS
- *  ========================= */
-let itemCounters = { angebot: 0, rechnung: 0, auftragsbestaetigung: 0 };
-
-function addItem(type) {
-  const itemsContainer = document.getElementById(type + "-items");
-  if (!itemsContainer) return;
-
-  const itemId = itemCounters[type]++;
-
-  const itemRow = document.createElement("div");
-  itemRow.className = "item-row";
-  itemRow.id = `${type}-item-${itemId}`;
-
-  itemRow.innerHTML = `
-    <div class="form-group">
-      <label>Beschreibung</label>
-      <input type="text" id="${type}-desc-${itemId}" placeholder="z.B. Floß-Miete 4 Stunden">
-    </div>
-    <div class="form-group">
-      <label>Menge</label>
-      <input type="number" id="${type}-qty-${itemId}" value="1" min="1" step="1">
-    </div>
-    <div class="form-group">
-      <label>Einzelpreis (Brutto)</label>
-      <input type="number" id="${type}-price-${itemId}" value="0" min="0" step="0.01">
-    </div>
-    <div class="form-group">
-      <label>MwSt.</label>
-      <input type="number" id="${type}-tax-${itemId}" value="19" min="0" step="1">
-    </div>
-    <button class="remove-item-btn" type="button" onclick="removeItem('${type}', ${itemId})">✕</button>
-  `;
-  itemsContainer.appendChild(itemRow);
-}
-function removeItem(type, itemId) {
-  const row = document.getElementById(`${type}-item-${itemId}`);
-  if (row) row.remove();
-}
-
-/** =========================
- *  AB: AUTO ANZAHLUNG
- *  ========================= */
-function applyAutoDepositFromOfferFirstPosition(firstPos) {
-  if (!firstPos) return;
-
-  const qty = parseFloat(firstPos.menge) || 0;
-  const price = parseFloat(firstPos.einzelpreisBrutto) || 0;
-  const tax = (firstPos.mwst != null) ? (parseFloat(firstPos.mwst) || 0) : 19;
-
-  const firstLineBrutto = qty * price;
-  const deposit = firstLineBrutto * DEPOSIT_RATE;
-
-  setIfExists("auftragsbestaetigung-anzahlung-betrag", isFinite(deposit) ? deposit.toFixed(2) : "0.00");
-  setIfExists("auftragsbestaetigung-anzahlung-mwst", isFinite(tax) ? tax : 19);
-}
-function applyAutoDepositFromAbFirstRow() {
-  const qtyEl = document.getElementById("auftragsbestaetigung-qty-0");
-  const priceEl = document.getElementById("auftragsbestaetigung-price-0");
-  const taxEl = document.getElementById("auftragsbestaetigung-tax-0");
-  if (!qtyEl || !priceEl) return;
-
-  const qty = parseFloat(qtyEl.value) || 0;
-  const price = parseFloat(priceEl.value) || 0;
-  const tax = taxEl ? (parseFloat(taxEl.value) || 19) : 19;
-
-  const deposit = (qty * price) * DEPOSIT_RATE;
-  setIfExists("auftragsbestaetigung-anzahlung-betrag", isFinite(deposit) ? deposit.toFixed(2) : "0.00");
-  setIfExists("auftragsbestaetigung-anzahlung-mwst", isFinite(tax) ? tax : 19);
-}
-
-/** =========================
- *  OFFER: Reservierung + Ablauf
- *  ========================= */
-function getVal(id) {
-  const el = document.getElementById(id);
-  return el ? el.value : "";
-}
-function setHidden(id, value) {
-  const el = document.getElementById(id);
-  if (el) el.value = value;
-}
-function getOrCreateOfferBookingId() {
-  const existing = (getVal("angebot-booking-id") || "").trim();
-  // Wenn schon eine ID drin steht und es eine UUID oder "alte" ID ist, die Supabase vielleicht noch akzeptiert? 
-  // Nein, Supabase wirft sofort den Fehler, also MUSS es UUID sein.
-  if (existing && existing.includes("-") && existing.length === 36) return existing;
-  return bookingUid(); // Generiert eine saubere UUID v4
-}
-
-function updateOfferBookingCheck(forceMessage=false) {
-  bookingLoadAll();
-
-  const statusEl = document.getElementById("angebot-booking-status");
-
-  const startVal = getVal("angebot-booking-start");
-  const endVal = getVal("angebot-booking-end");
-
-  const startD = dtLocalToDate(startVal);
-  const endD = dtLocalToDate(endVal);
-
-  if (!startD || !endD) {
-    if (forceMessage && statusEl) statusEl.innerHTML = `<span class="status-bad">Bitte Start und Ende auswählen.</span>`;
-    return { ok:false, startMs:null, endMs:null, conflicts:[] };
-  }
-
-  const startMs = startD.getTime();
-  const endMs = endD.getTime();
-
-  if (!(startMs < endMs)) {
-    if (statusEl) statusEl.innerHTML = `<span class="status-bad">Ende muss nach Start liegen.</span>`;
-    return { ok:false, startMs, endMs, conflicts:[] };
-  }
-
-  const ignoreId = (getVal("angebot-booking-id") || "").trim() || null;
-  const conflicts = bookingConflicts(startMs, endMs, ignoreId);
-
-  if (conflicts.length) {
-    const lines = conflicts.slice().sort((a,b)=>a.startMs-b.startMs).slice(0,8).map(b=>{
-      const tag = b.status === "confirmed" ? "t-conf" : "t-res";
-      const label = b.status === "confirmed" ? "bestätigt" : "reserviert";
-      return `<div style="margin-top:6px;">
-        <span class="tag ${tag}">${label}</span>
-        <span class="mono">${fmtDT(b.startMs)} – ${fmtDT(b.endMs)}</span>
-        ${b.customer ? ` | <strong>${escapeHtml(b.customer)}</strong>` : ``}
-        ${b.ref ? ` | Ref: ${escapeHtml(b.ref)}` : ``}
-      </div>`;
-    }).join("");
-
-    if (statusEl) statusEl.innerHTML = `<span class="status-bad">Belegt im gewählten Zeitraum (${conflicts.length} Treffer).</span>${lines}`;
-    return { ok:false, startMs, endMs, conflicts };
-  }
-
-  if (statusEl) statusEl.innerHTML = `<span class="status-ok">Frei – keine Überschneidung gefunden.</span>`;
-  return { ok:true, startMs, endMs, conflicts:[] };
-}
-
-function ensureOfferReservation({reason="save", forceCheckMessage=false}={}) {
-  const chk = updateOfferBookingCheck(forceCheckMessage);
-  if (!chk.ok) return false;
-
-  const offerValidUntilIso = (getVal("angebot-gueltig") || "").trim();
-  const validUntilMs = isoDateEndOfDayMs(offerValidUntilIso);
-
-  if (BOOKING.EXPIRE_RESERVED_BY_OFFER_VALID_UNTIL && BOOKING.REQUIRE_OFFER_VALID_UNTIL_FOR_RESERVATION) {
-    if (!offerValidUntilIso || !isFinite(validUntilMs)) {
-      const statusEl = document.getElementById("angebot-booking-status");
-      if (statusEl) statusEl.innerHTML = `<span class="status-bad">Bitte „Gültig bis“ setzen (Angebotsfrist), damit Reservierungen automatisch ablaufen.</span>`;
-      return false;
-    }
-  }
-
-  const id = getOrCreateOfferBookingId();
-  const customer = (getVal("angebot-kunde-name") || "").trim();
-  const ref = (getVal("angebot-nummer") || "").trim();
-  const note = reason === "manual" ? "Reservierung (manuell) aus Angebot" : "Reservierung (automatisch) beim Angebot";
-
-  bookingUpsert({
-    id,
-    resourceId: BOOKING.RESOURCE_ID,
-    status: "reserved",
-    customer,
-    ref,
-    note,
-    startMs: chk.startMs,
-    endMs: chk.endMs,
-    offerNumber: ref,
-    offerValidUntilIso: offerValidUntilIso,
-    validUntilMs: isFinite(validUntilMs) ? validUntilMs : null
-  });
-
-  setHidden("angebot-booking-id", id);
-  bookingRefreshUI();
-
-  const statusEl = document.getElementById("angebot-booking-status");
-  if (statusEl) statusEl.innerHTML = `<span class="status-ok">Reserviert (${reason === "save" ? "automatisch" : "manuell"}).</span> ID: <span class="mono">${escapeHtml(id)}</span> | gültig bis: <span class="mono">${escapeHtml(offerValidUntilIso)}</span>`;
-  return true;
-}
-
-
-function offerSyncBookingDateFromLeistung({force=true}={}) {
-  const dateIso = String(getVal('angebot-leistung') || '').trim();
-  if (!dateIso) return;
-
-  const startVal = String(getVal('angebot-booking-start') || '').trim();
-  const endVal   = String(getVal('angebot-booking-end') || '').trim();
-
-  const startTime = (startVal.includes('T') ? startVal.split('T')[1] : '') || OFFER_DEFAULT_START_TIME;
-  const endTime   = (endVal.includes('T')   ? endVal.split('T')[1]   : '') || OFFER_DEFAULT_END_TIME;
-
-  // Wenn nicht erzwungen: nur befüllen, wenn Start/Ende leer sind
-  if (!force && startVal && endVal) return;
-
-  setIfExists('angebot-booking-start', dateIso + 'T' + startTime);
-  setIfExists('angebot-booking-end',   dateIso + 'T' + endTime);
-
-  try { updateOfferBookingCheck(false); } catch (e) {}
-}
-
-// OFFER Schnellwahl: Ganzer Tag (setzt Start/Ende auf einen Kalendertag)
-function offerSetFullDay() {
-  const startVal = String(getVal('angebot-booking-start') || '').trim();
-  const leistung = String(getVal('angebot-leistung') || '').trim();
-  let dateIso = '';
-
-  // Priorität: Datum aus Buchungsstart, sonst Leistungsdatum
-  if (startVal && startVal.includes('T')) dateIso = startVal.split('T')[0];
-  else if (leistung) dateIso = leistung;
-
-  if (!dateIso) {
-    alert('Bitte zuerst ein Datum setzen (Leistungsdatum oder Buchungsstart).');
-    return;
-  }
-
-  setIfExists('angebot-booking-start', dateIso + 'T00:00');
-  setIfExists('angebot-booking-end',   dateIso + 'T23:59');
-
-  try { updateOfferBookingCheck(false); } catch (e) {}
-}
-
-
-function reserveOfferNow() {
-  const ok = ensureOfferReservation({reason:"manual", forceCheckMessage:true});
-  if (ok) alert("Reservierung gespeichert.");
-}
-
-function cancelOfferReservation() {
-  const id = (getVal("angebot-booking-id") || "").trim();
-  const statusEl = document.getElementById("angebot-booking-status");
-  if (!id) {
-    if (statusEl) statusEl.innerHTML = `<span class="status-bad">Keine Reservierung-ID vorhanden.</span>`;
-    return;
-  }
-  const ok = bookingSetStatus(id, "cancelled");
-  if (!ok) {
-    if (statusEl) statusEl.innerHTML = `<span class="status-bad">Reservierung nicht gefunden (ID).</span>`;
-    return;
-  }
-  setHidden("angebot-booking-id", "");
-  bookingRefreshUI();
-  if (statusEl) statusEl.innerHTML = `<span class="status-ok">Reservierung storniert.</span>`;
-}
-
-/** AB: automatisch bestätigen */
-function ensureBookingConfirmedForAB({mode="preview"}={}) {
-  const bid = (getVal("auftragsbestaetigung-booking-id") || "").trim();
-  if (!bid) return true;
-  const abNr = (getVal("auftragsbestaetigung-nummer") || "").trim();
-  if (!abNr) return (mode === "preview");
-  bookingSetStatus(bid, "confirmed", abNr);
-  bookingRefreshUI();
-  return true;
-}
-
-/** =========================
- *  JSON helpers
- *  ========================= */
-function collectItems(type) {
-  const positionen = [];
-  const items = document.querySelectorAll(`#${type}-items .item-row`);
-  items.forEach(item => {
-    const descInput = item.querySelector(`input[id^="${type}-desc-"]`);
-    const qtyInput  = item.querySelector(`input[id^="${type}-qty-"]`);
-    const priceInput= item.querySelector(`input[id^="${type}-price-"]`);
-    const taxInput  = item.querySelector(`input[id^="${type}-tax-"]`);
-
-    const beschreibung = descInput ? descInput.value : "";
-    if (!beschreibung) return;
-
-    const menge = qtyInput ? parseFloat(qtyInput.value) || 0 : 0;
-    const einzelpreisBrutto = priceInput ? parseFloat(priceInput.value) || 0 : 0;
-    const mwst = taxInput ? parseFloat(taxInput.value) || 0 : 0;
-
-    positionen.push({ beschreibung, menge, einzelpreisBrutto, mwst });
-  });
-  return positionen;
-}
-
-function buildAngebotJson() {
-  const startD = dtLocalToDate(getVal("angebot-booking-start"));
-  const endD = dtLocalToDate(getVal("angebot-booking-end"));
-  const booking = (startD && endD) ? {
-    resourceId: BOOKING.RESOURCE_ID,
-    startLocal: getVal("angebot-booking-start"),
-    endLocal: getVal("angebot-booking-end"),
-    startMs: startD.getTime(),
-    endMs: endD.getTime(),
-    bookingId: getVal("angebot-booking-id") || "",
-    offerValidUntilIso: getVal("angebot-gueltig") || ""
-  } : null;
-
-  return {
-    typ: "angebot",
-    nummer: getVal("angebot-nummer"),
-    datum: getVal("angebot-datum"),
-    kunde: {
-      name: getVal("angebot-kunde-name"),
-      adresse: getVal("angebot-kunde-adresse"),
-      plz: getVal("angebot-kunde-plz"),
-      ort: getVal("angebot-kunde-ort")
-    },
-    leistungsdatum: getVal("angebot-leistung"),
-    gueltigBis: getVal("angebot-gueltig"),
-    booking,
-    positionen: collectItems("angebot"),
-    notizen: getVal("angebot-notizen")
-  };
-}
-
-function buildAuftragsbestaetigungJson() {
-  return {
-    typ: "auftragsbestaetigung",
-    nummer: getVal("auftragsbestaetigung-nummer"),
-    datum: getVal("auftragsbestaetigung-datum"),
-    referenzAngebot: getVal("auftragsbestaetigung-referenz-angebot"),
-    bookingId: getVal("auftragsbestaetigung-booking-id") || "",
-    kunde: {
-      name: getVal("auftragsbestaetigung-kunde-name"),
-      adresse: getVal("auftragsbestaetigung-kunde-adresse"),
-      plz: getVal("auftragsbestaetigung-kunde-plz"),
-      ort: getVal("auftragsbestaetigung-kunde-ort")
-    },
-    leistungsdatum: getVal("auftragsbestaetigung-leistung"),
-    positionen: collectItems("auftragsbestaetigung"),
-    anzahlung: {
-      beschreibung: "Anzahlung",
-      betragBrutto: parseFloat(getVal("auftragsbestaetigung-anzahlung-betrag")) || 0,
-      mwst: parseFloat(getVal("auftragsbestaetigung-anzahlung-mwst")) || 0,
-      faellig: getVal("auftragsbestaetigung-anzahlung-faellig"),
-      zahlungszielTage: 14,
-      berechnungsbasis: "33,333333333333333% der 1. Position (Brutto, inkl. Menge)",
-      autoBerechnungAktiv: abDepositAuto
-    },
-    notizen: getVal("auftragsbestaetigung-notizen")
-  };
-}
-
-function buildRechnungJson() {
-  return {
-    typ: "rechnung",
-    nummer: getVal("rechnung-nummer"),
-    datum: getVal("rechnung-datum"),
-    kunde: {
-      name: getVal("rechnung-kunde-name"),
-      adresse: getVal("rechnung-kunde-adresse"),
-      plz: getVal("rechnung-kunde-plz"),
-      ort: getVal("rechnung-kunde-ort")
-    },
-    leistungsdatum: getVal("rechnung-leistung"),
-    faellig: getVal("rechnung-faellig"),
-    referenzAuftragsbestaetigung: getVal("rechnung-referenz-ab"),
-    referenzAngebot: getVal("rechnung-referenz-angebot"),
-    positionen: collectItems("rechnung"),
-    anzahlung: {
-      betragBrutto: parseFloat(getVal("rechnung-anzahlung-betrag")) || 0,
-      mwst: parseFloat(getVal("rechnung-anzahlung-mwst")) || 0,
-      faellig: getVal("rechnung-anzahlung-faellig"),
-      inTabelle: getVal("rechnung-anzahlung-in-tabelle") === "ja"
-    },
-    notizen: getVal("rechnung-notizen")
-  };
-}
-
-function saveJsonLocally(data, fileName) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(a.href);
-}
-
-async function saveAngebotJsonLocally() {
-    bookingLoadAll();
-    if (!getVal('angebot-nummer').trim()) { alert("Bitte eine Angebotsnummer eingeben."); return; }
-
-    if (BOOKING.REQUIRE_FOR_OFFER) {
-        const ok = ensureOfferReservation({reason:'save', forceCheckMessage:true});
-        if (!ok) {
-             alert("Angebot kann nicht gespeichert werden: Zeitraum ungültig/belegt oder Gültig bis fehlt.");
-             return;
-        }
-    }
-    const data = buildAngebotJson();
-    saveJsonLocally(data, data.nummer + ".json");
-
-    if (typeof sb !== "undefined" && sb) {
-        try {
-            const { error } = await sb.from('wm_documents').insert({
-                type: 'angebot',
-                number: String(data.nummer),
-                customer_name: data.kunde ? data.kunde.name : null,
-                content: data
-            });
-            if (error) { console.error("Fehler beim Speichern (Supabase):", error); alert("Fehler beim Speichern in Supabase: " + error.message); } else { console.log("Erfolgreich in Supabase gespeichert."); }
-        } catch (e) { console.error("Unerwarteter Fehler (Supabase):", e); alert("Unerwarteter Supabase Fehler."); }
-    }
-}
-
-async function saveAuftragsbestaetigungJsonLocally() {
-    bookingLoadAll();
-    const data = buildAuftragsbestaetigungJson();
-    if (!data.nummer) { alert("Bitte eine Auftragsbestätigungsnummer eingeben."); return; }
-
-    if (data.bookingId) ensureBookingConfirmedForAB({mode:'save'});
-
-    saveJsonLocally(data, data.nummer + ".json");
-
-    if (typeof sb !== "undefined" && sb) {
-        try {
-            const { error } = await sb.from('wm_documents').insert({
-                type: 'auftragsbestaetigung',
-                number: String(data.nummer),
-                customer_name: data.kunde ? data.kunde.name : null,
-                content: data
-            });
-            if (error) { console.error("Fehler beim Speichern (Supabase):", error); alert("Fehler beim Speichern in Supabase: " + error.message); } else { console.log("Erfolgreich in Supabase gespeichert."); }
-        } catch (e) { console.error("Unerwarteter Fehler (Supabase):", e); alert("Unerwarteter Supabase Fehler."); }
-    }
-}
-
-async function saveRechnungJsonLocally() {
-    const data = buildRechnungJson();
-    if (!data.nummer) { alert("Bitte eine Rechnungsnummer eingeben."); return; }
-
-    saveJsonLocally(data, data.nummer + ".json");
-
-    if (typeof sb !== "undefined" && sb) {
-        try {
-            const { error } = await sb.from('wm_documents').insert({
-                type: 'rechnung',
-                number: String(data.nummer),
-                customer_name: data.kunde ? data.kunde.name : null,
-                content: data
-            });
-            if (error) { console.error("Fehler beim Speichern (Supabase):", error); alert("Fehler beim Speichern in Supabase: " + error.message); } else { console.log("Erfolgreich in Supabase gespeichert."); }
-        } catch (e) { console.error("Unerwarteter Fehler (Supabase):", e); alert("Unerwarteter Supabase Fehler."); }
-    }
-}
-
-/** =========================
- *  LOAD JSON
- *  ========================= */
-function loadAngebotJsonForAuftragsbestaetigung(event) {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
-
-  const r = new FileReader();
-  r.onload = () => {
-    try {
-      const angebot = JSON.parse(r.result);
-      fuelleAuftragsbestaetigungAusAngebot(angebot);
-      alert("Angebot übernommen.");
-    } catch {
-      alert("Ungültige Angebots-JSON.");
-    }
-  };
-  r.readAsText(file, "utf-8");
-  event.target.value = "";
-}
-
-function fuelleAuftragsbestaetigungAusAngebot(angebot) {
-  if (!angebot || !angebot.kunde) { alert("Angebotsdaten unvollständig."); return; }
-
-  setIfExists("auftragsbestaetigung-kunde-name", angebot.kunde.name || "");
-  setIfExists("auftragsbestaetigung-kunde-adresse", angebot.kunde.adresse || "");
-  setIfExists("auftragsbestaetigung-kunde-plz", angebot.kunde.plz || "");
-  setIfExists("auftragsbestaetigung-kunde-ort", angebot.kunde.ort || "");
-
-  setIfExists("auftragsbestaetigung-leistung", angebot.leistungsdatum || "");
-  setIfExists("auftragsbestaetigung-referenz-angebot", angebot.nummer || "");
-
-  
-  // Robuste Booking-ID Extrahierung
-  let bid = "";
-  if (angebot.booking) {
-    bid = angebot.booking.bookingId || angebot.booking.id || "";
-  }
-  if (!bid) bid = angebot.bookingId || angebot.booking_id || "";
-
-  setIfExists("auftragsbestaetigung-booking-id", bid);
-
-
-  const itemsContainer = document.getElementById("auftragsbestaetigung-items");
-  itemsContainer.innerHTML = "";
-  itemCounters.auftragsbestaetigung = 0;
-
-  if (Array.isArray(angebot.positionen) && angebot.positionen.length) {
-    angebot.positionen.forEach(pos => {
-      addItem("auftragsbestaetigung");
-      const id = itemCounters.auftragsbestaetigung - 1;
-      setIfExists(`auftragsbestaetigung-desc-${id}`, pos.beschreibung || "");
-      setIfExists(`auftragsbestaetigung-qty-${id}`, (pos.menge != null ? pos.menge : 1));
-      setIfExists(`auftragsbestaetigung-price-${id}`, (pos.einzelpreisBrutto != null ? pos.einzelpreisBrutto : 0));
-      setIfExists(`auftragsbestaetigung-tax-${id}`, (pos.mwst != null ? pos.mwst : 19));
-    });
-  } else {
-    addItem("auftragsbestaetigung");
-  }
-
-  setTextareaIfEmpty("auftragsbestaetigung-notizen", defaultTextAuftragsbestaetigung());
-
-  abDepositAuto = true;
-  if (angebot.positionen && angebot.positionen[0]) applyAutoDepositFromOfferFirstPosition(angebot.positionen[0]);
-}
-
-function loadAuftragsbestaetigungJsonForRechnung(event) {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
-
-  const r = new FileReader();
-  r.onload = () => {
-    try {
-      const ab = JSON.parse(r.result);
-      fuelleRechnungAusAuftragsbestaetigung(ab);
-      alert("Auftragsbestätigung übernommen.");
-    } catch {
-      alert("Ungültige AB-JSON.");
-    }
-  };
-  r.readAsText(file, "utf-8");
-  event.target.value = "";
-}
-
-function fuelleRechnungAusAuftragsbestaetigung(ab) {
-  if (!ab || !ab.kunde) { alert("AB-Daten unvollständig."); return; }
-
-  setIfExists("rechnung-kunde-name", ab.kunde.name || "");
-  setIfExists("rechnung-kunde-adresse", ab.kunde.adresse || "");
-  setIfExists("rechnung-kunde-plz", ab.kunde.plz || "");
-  setIfExists("rechnung-kunde-ort", ab.kunde.ort || "");
-
-  setIfExists("rechnung-leistung", ab.leistungsdatum || "");
-  setIfExists("rechnung-referenz-ab", ab.nummer || "");
-  setIfExists("rechnung-referenz-angebot", ab.referenzAngebot || "");
-
-  const itemsContainer = document.getElementById("rechnung-items");
-  itemsContainer.innerHTML = "";
-  itemCounters.rechnung = 0;
-
-  if (Array.isArray(ab.positionen) && ab.positionen.length) {
-    ab.positionen.forEach(pos => {
-      addItem("rechnung");
-      const id = itemCounters.rechnung - 1;
-      setIfExists(`rechnung-desc-${id}`, pos.beschreibung || "");
-      setIfExists(`rechnung-qty-${id}`, (pos.menge != null ? pos.menge : 1));
-      setIfExists(`rechnung-price-${id}`, (pos.einzelpreisBrutto != null ? pos.einzelpreisBrutto : 0));
-      setIfExists(`rechnung-tax-${id}`, (pos.mwst != null ? pos.mwst : 19));
-    });
-  } else {
-    addItem("rechnung");
-  }
-
-  const anz = ab.anzahlung || {};
-  setIfExists("rechnung-anzahlung-betrag", (anz.betragBrutto != null ? anz.betragBrutto : 0));
-  setIfExists("rechnung-anzahlung-mwst", (anz.mwst != null ? anz.mwst : 19));
-  setIfExists("rechnung-anzahlung-faellig", anz.faellig || "");
-
-  setIfExists("rechnung-notizen", defaultTextRechnung());
-}
-
-/** =========================
- *  BUCHUNGEN PANEL
- *  ========================= */
-function bookingCreateFromForm(status, editIdOverride = null) {
-  const msgEl = document.getElementById("booking-msg");
-  const customer = (getVal("booking-customer") || "").trim();
-  const ref = (getVal("booking-ref") || "").trim();
-  const note = (getVal("booking-note") || "").trim();
-
-  const startD = dtLocalToDate(getVal("booking-start"));
-  const endD = dtLocalToDate(getVal("booking-end"));
-  if (!startD || !endD) { if (msgEl) msgEl.innerHTML = `<span class="status-bad">Bitte Start/Ende setzen.</span>`; return; }
-
-  // HIER IST DER FIX: Hole die ID zum Überschreiben!
-  let theId = editIdOverride || (document.getElementById("booking-edit-id") ? document.getElementById("booking-edit-id").value.trim() : "");
-  if (!theId) theId = bookingUid(); // Neue ID, wenn keine im Hidden-Field steht
-
-  const nowMs = Date.now();
-  const obj = {
-    id: theId,
-    customer,
-    ref,
-    note,
-    startMs: startD.getTime(),
-    endMs: endD.getTime(),
-    status: status,
-    resourceId: BOOKING.RESOURCE_ID,
-    updatedAt: nowMs
-  };
-
-  // Wenn es eine komplett neue Buchung ist (kein Edit), setze CreatedAt
-  if (!editIdOverride && (!document.getElementById("booking-edit-id") || !document.getElementById("booking-edit-id").value.trim())) {
-    obj.createdAt = nowMs;
-    obj.offerValidUntilIso = getVal("booking-valid-until");
-  }
-
-  // Speichern in lokaler Liste & Supabase wm_bookings
-  bookingUpsert(obj);
-
-  if (msgEl) {
-    msgEl.innerHTML = `<span class="status-ok">Erfolgreich ${editIdOverride || document.getElementById("booking-edit-id").value ? 'aktualisiert' : 'gespeichert'}: <span class="mono">${escapeHtml(theId)}</span></span>`;
-  }
-
-  // UI & Kalender aktualisieren
-  bookingRefreshUI();
-
-  // WICHTIG: wm_public_calendar updaten!
-  if (typeof savePublicCalendarToSupabase === "function") {
-    savePublicCalendarToSupabase();
-  }
-
-  // Hidden Field leeren nach erfolgreichem Speichern
-  if (document.getElementById("booking-edit-id")) {
-    document.getElementById("booking-edit-id").value = "";
-  }
-}
-
-function renderCalendarSafe() {
-  try { if (typeof WMKCAL !== "undefined" && typeof WMKCAL.render === "function") WMKCAL.render(); } catch(e) {}
-  try { if (typeof WMK_CAL !== "undefined" && typeof WMK_CAL.render === "function") WMK_CAL.render(); } catch(e) {}
-}
-
-function bookingRefreshUI() {
-  renderCalendarSafe();
-  bookingLoadAll();
-
-  const tbody = document.getElementById("booking-list");
-  if (!tbody) return;
-
-  const all = bookingLoadAll()
-    .filter(b => b && b.resourceId === BOOKING.RESOURCE_ID)
-    .slice()
-    .sort((a,b)=>Number(a.startMs)-Number(b.startMs));
-
-  if (!all.length) {
-    tbody.innerHTML = `<tr><td colspan="6" class="hint">Keine Buchungen gespeichert.</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = all.map(b => {
-    const tagCls = b.status === "confirmed" ? "t-conf" : (b.status === "reserved" ? "t-res" : "t-canc");
-    const label = b.status === "confirmed" ? "bestätigt" : (b.status === "reserved" ? "reserviert" : "storniert");
-    const validIso = b.offerValidUntilIso ? ` | <span class="mono">${escapeHtml(b.offerValidUntilIso)}</span>` : "";
-    return `
-      <tr>
-        <td><span class="tag ${tagCls}">${label}</span></td>
-        <td class="mono">${fmtDT(b.startMs)}<br>${fmtDT(b.endMs)}</td>
-        <td>${escapeHtml(b.customer || "")}</td>
-        <td>${escapeHtml(b.ref || "")}${validIso}</td>
-        <td class="mono">${escapeHtml(b.id || "")}</td>
-        <td>
-          <button class="btn btn-muted" type="button" onclick="bookingSetStatusAction('${escapeHtml(b.id)}','cancelled')">Stornieren</button>
-          <button class="btn btn-danger" type="button" onclick="bookingDeleteAction('${escapeHtml(b.id)}')">Löschen</button>
-        </td>
-      </tr>
-    `;
-  }).join("");
-}
-
-function bookingSetStatusAction(id, status) {
-  bookingSetStatus(id, status);
-  bookingRefreshUI();
-  updateOfferBookingCheck(false);
-  try { if (typeof WMK_CAL!=="undefined") WMK_CAL.render(); } catch(e) {}
-}
-
-function bookingDeleteAction(id) {
-  if (!confirm("Buchung wirklich löschen?")) return;
-  bookingDelete(id);
-  bookingRefreshUI();
-  updateOfferBookingCheck(false);
-  try { if (typeof WMK_CAL!=="undefined") WMK_CAL.render(); } catch(e) {}
-}
-
-function bookingExportJson() {
-  const data = JSON.stringify(bookingLoadAll(), null, 2);
-  const blob = new Blob([data], {type:"application/json"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "wm_bookings_export.json";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(a.href);
-}
-
-/** =========================
- *  NEU: Öffentlicher Kalender-Export (ohne Kundendaten)
- *  ========================= */
-function toLocalIsoNoTZ(ms) {
-  const d = new Date(ms);
-  const pad = (n) => String(n).padStart(2, "0");
-  return (
-    d.getFullYear() + "-" +
-    pad(d.getMonth() + 1) + "-" +
-    pad(d.getDate()) + "T" +
-    pad(d.getHours()) + ":" +
-    pad(d.getMinutes()) + ":00"
-  );
-}
-
-
-async function syncPublicCalendarToSupabase() {
-    try {
-        if (typeof sb === 'undefined' || !sb) {
-            alert("Supabase ist nicht verbunden. Überprüfe deine Keys.");
-            return;
-        }
-
-        // 1. Lokale Buchungen abrufen und filtern (nur reservierte/bestätigte)
-        const all = typeof bookingLoadAll === 'function' ? bookingLoadAll() : [];
-        const events = all
-            .filter(b => b && b.resourceId === BOOKING.RESOURCEID)
-            .filter(b => b.status === 'confirmed' || b.status === 'reserved')
-            .map(b => ({
-                booking_id: String(b.id),
-                title: b.status === 'confirmed' ? 'Gebucht' : 'Reserviert',
-                start_time: b.startMs ? new Date(b.startMs).toISOString() : null,
-                end_time: b.endMs ? new Date(b.endMs).toISOString() : null,
-                status: b.status
-            }))
-            .filter(b => b.start_time && b.end_time); // Nur valide Daten
-
-        // 2. Alte Kalenderdaten in Supabase komplett löschen
-        const { error: deleteError } = await sb
-            .from('wm_public_calendar')
-            .delete()
-            .neq('status', 'loesche_alles'); 
-
-        if (deleteError) throw deleteError;
-
-        // 3. Neue Kalenderdaten einfügen
-        if (events.length > 0) {
-            const { error: insertError } = await sb
-                .from('wm_public_calendar')
-                .insert(events);
-
-            if (insertError) throw insertError;
-        }
-
-        alert("Öffentlicher Kalender erfolgreich mit Supabase synchronisiert!");
-    } catch (e) {
-        console.error("Supabase Sync Fehler:", e);
-        alert("Fehler bei der Synchronisation: " + e.message);
-    }
-}
-
-
-function exportPublicCalendarJson() {
-  // Ablauf anwenden, damit abgelaufene Reservierungen nicht mehr "blocken"
-  const all = bookingLoadAll();
-
-  const events = all
-    .filter(b => b && b.resourceId === BOOKING.RESOURCE_ID)
-    .filter(b => b.status === "confirmed" || b.status === "reserved")
-    .map(b => {
-      const isConf = b.status === "confirmed";
-      return {
-        title: isConf ? "Gebucht" : "Reserviert",
-        start: toLocalIsoNoTZ(b.startMs),
-        end: toLocalIsoNoTZ(b.endMs),
-        status: b.status
-      };
-    });
-
-  const payload = {
-    generatedAt: new Date().toISOString(),
-    resourceId: BOOKING.RESOURCE_ID,
-    events
-  };
-
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "wm_public_calendar.json";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(a.href);
-}
-
-function bookingImportJson(event) {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
-
-  const r = new FileReader();
-  r.onload = () => {
-    try {
-      const arr = JSON.parse(r.result);
-      if (!Array.isArray(arr)) throw new Error("not array");
-      const normalized = arr.map(b => ({
-        id: String(b.id || bookingUid()),
-        resourceId: String(b.resourceId || BOOKING.RESOURCE_ID),
-        status: String(b.status || "confirmed"),
-        customer: String(b.customer || ""),
-        ref: String(b.ref || ""),
-        note: String(b.note || ""),
-        startMs: Number(b.startMs),
-        endMs: Number(b.endMs),
-        offerValidUntilIso: String(b.offerValidUntilIso || ""),
-        validUntilMs: (b.validUntilMs == null ? null : Number(b.validUntilMs)),
-        createdAt: Number(b.createdAt || Date.now()),
-        updatedAt: Number(b.updatedAt || Date.now())
-      })).filter(b => isFinite(b.startMs) && isFinite(b.endMs));
-      bookingSaveAll(normalized);
-      bookingRefreshUI();
-      updateOfferBookingCheck(false);
-      alert("Import erfolgreich.");
-    } catch {
-      alert("Import fehlgeschlagen: ungültiges JSON.");
-    }
-  };
-  r.readAsText(file, "utf-8");
-  event.target.value = "";
-}
-
-// Saubere LÖSCHEN-Funktion (ersetzt bookingWipeAll)
-function bookingWipeAll() {
-  const userInput = prompt('WARNUNG! Möchtest du wirklich ALLE Buchungen unwiderruflich LÖSCHEN?\nTippe exakt "LÖSCHEN" (Großbuchstaben) ein!');
-  if (userInput !== 'LÖSCHEN') {
-    alert('Löschen abgebrochen.');
-    return;
-  }
-  localStorage.removeItem(BOOKING.STORAGEKEY);
-  bookingRefreshUI();
-  updateOfferBookingCheck(false);
-  alert('Alle Buchungen gelöscht.');
-}
-
-/** =========================
- *  PREVIEW / PRINT
- *  ========================= */
-function getDocMeta(type) {
-  if (type === "angebot") return { title:"ANGEBOT", numberLabel:"Angebotsnummer", numberId:"angebot-nummer", dateId:"angebot-datum", leistungId:"angebot-leistung" };
-  if (type === "rechnung") return { title:"RECHNUNG", numberLabel:"Rechnungsnummer", numberId:"rechnung-nummer", dateId:"rechnung-datum", leistungId:"rechnung-leistung" };
-  return { title:"AUFTRAGSBESTÄTIGUNG", numberLabel:"Auftragsbestätigungsnummer", numberId:"auftragsbestaetigung-nummer", dateId:"auftragsbestaetigung-datum", leistungId:"auftragsbestaetigung-leistung" };
-}
-
-function generatePreview(type) {
-  bookingLoadAll();
-
-  if (type === "angebot" && BOOKING.REQUIRE_FOR_OFFER) {
-    const chk = updateOfferBookingCheck(true);
-    if (!chk.ok) { alert("Zeitraum ungültig oder belegt."); return; }
-  }
-  if (type === "auftragsbestaetigung") {
-    ensureBookingConfirmedForAB({mode:"preview"});
-  }
-
-  const kundeName = getVal(`${type}-kunde-name`);
-  const kundeAdresse = getVal(`${type}-kunde-adresse`);
-  const kundePlz = getVal(`${type}-kunde-plz`);
-  const kundeOrt = getVal(`${type}-kunde-ort`);
-  if (!kundeName || !kundeAdresse || !kundePlz || !kundeOrt) { alert("Bitte alle Pflichtfelder ausfüllen."); return; }
-
-  const docMeta = getDocMeta(type);
-  const docNummer = getVal(docMeta.numberId);
-  const docDatum = getVal(docMeta.dateId);
-
-  let additionalInfo = "";
-  const leistungVal = docMeta.leistungId ? getVal(docMeta.leistungId) : "";
-  if (leistungVal) additionalInfo += `<p><strong>Leistungsdatum:</strong> ${formatDate(leistungVal)}</p>`;
-
-  if (type === "angebot") {
-    const gueltig = getVal("angebot-gueltig");
-    if (gueltig) additionalInfo += `<p><strong>Gültig bis:</strong> ${formatDate(gueltig)}</p>`;
-
-    const bs = getVal("angebot-booking-start");
-    const be = getVal("angebot-booking-end");
-    if (bs && be) {
-      const sd = dtLocalToDate(bs); const ed = dtLocalToDate(be);
-      additionalInfo += `<p><strong>Buchungszeitraum:</strong> ${escapeHtml(fmtDT(sd.getTime()))} – ${escapeHtml(fmtDT(ed.getTime()))}</p>`;
-    }
-    const bid = (getVal("angebot-booking-id") || "").trim();
-    if (bid) additionalInfo += `<p><strong>Reservierungs-ID:</strong> <span class="mono">${escapeHtml(bid)}</span></p>`;
-  }
-
-  if (type === "auftragsbestaetigung") {
-    const ref = getVal("auftragsbestaetigung-referenz-angebot");
-    if (ref) additionalInfo += `<p><strong>Referenz Angebot:</strong> ${escapeHtml(ref)}</p>`;
-    const bid = (getVal("auftragsbestaetigung-booking-id") || "").trim();
-    if (bid) additionalInfo += `<p><strong>Buchung-ID:</strong> <span class="mono">${escapeHtml(bid)}</span></p>`;
-  }
-
-  if (type === "rechnung") {
-    const faellig = getVal("rechnung-faellig");
-    if (faellig) additionalInfo += `<p><strong>Fällig am:</strong> ${formatDate(faellig)}</p>`;
-    const refAB = getVal("rechnung-referenz-ab");
-    if (refAB) additionalInfo += `<p><strong>Referenz Auftragsbestätigung:</strong> ${escapeHtml(refAB)}</p>`;
-    const refAngebot = getVal("rechnung-referenz-angebot");
-    if (refAngebot) additionalInfo += `<p><strong>Referenz Angebot:</strong> ${escapeHtml(refAngebot)}</p>`;
-  }
-
-  let tableRows = "";
-  let subtotal = 0;
-  let totalTax = 0;
-  let rowIndex = 0;
-
-  const items = document.querySelectorAll(`#${type}-items .item-row`);
-  items.forEach(item => {
-    const desc = item.querySelector(`input[id^="${type}-desc-"]`)?.value || "";
-    if (!desc) return;
-
-    const qty = parseFloat(item.querySelector(`input[id^="${type}-qty-"]`)?.value) || 0;
-    const brutto = parseFloat(item.querySelector(`input[id^="${type}-price-"]`)?.value) || 0;
-    const tax = parseFloat(item.querySelector(`input[id^="${type}-tax-"]`)?.value) || 0;
-
-    rowIndex++;
-
-    const netto = brutto / (1 + (tax / 100));
-    const lineNet = qty * netto;
-    const lineTax = lineNet * (tax / 100);
-    const lineTotal = lineNet + lineTax;
-
-    subtotal += lineNet;
-    totalTax += lineTax;
-
-    tableRows += `
-      <tr>
-        <td>${rowIndex}</td>
-        <td>${escapeHtml(desc)}</td>
-        <td style="text-align:center;">${formatQty(qty)}</td>
-        <td style="text-align:right;">${moneySpan(brutto)}</td>
-        <td style="text-align:center;">${formatQty(tax)}%</td>
-        <td style="text-align:right;">${moneySpan(lineTotal, true)}</td>
-      </tr>
-    `;
-  });
-
-  let anzahlungRow = "";
-  let anzahlungDeductNet = 0;
-  let anzahlungDeductTax = 0;
-
-  if (type === "rechnung") {
-    const inTabelle = getVal("rechnung-anzahlung-in-tabelle") === "ja";
-    const anzBruttoPos = parseFloat(getVal("rechnung-anzahlung-betrag")) || 0;
-    const anzMwst = parseFloat(getVal("rechnung-anzahlung-mwst")) || 0;
-
-    if (inTabelle && anzBruttoPos > 0) {
-      const bruttoNeg = -anzBruttoPos;
-      const nettoNeg = bruttoNeg / (1 + (anzMwst / 100));
-      const taxNeg = nettoNeg * (anzMwst / 100);
-
-      anzahlungDeductNet = nettoNeg;
-      anzahlungDeductTax = taxNeg;
-
-      anzahlungRow = `
-        <tr style="background:#eef6ff;">
-          <td>${rowIndex + 1}</td>
-          <td><strong>Anzahlung (Verrechnung)</strong></td>
-          <td style="text-align:center;">1</td>
-          <td style="text-align:right;">${moneySpan(bruttoNeg)}</td>
-          <td style="text-align:center;">${formatQty(anzMwst)}%</td>
-          <td style="text-align:right;">${moneySpan(bruttoNeg, true)}</td>
-        </tr>
-      `;
-    }
-  }
-
-  subtotal += anzahlungDeductNet;
-  totalTax += anzahlungDeductTax;
-  const total = subtotal + totalTax;
-
-  const notizen = getVal(`${type}-notizen`);
-
-  let zahlungsbedingungen = "";
-  if (type === "rechnung") {
-    zahlungsbedingungen = `
-      <div class="preview-section zahlungsblock">
-        <h3>Zahlungsbedingungen</h3>
-        <p>Bitte begleichen Sie den Rechnungsbetrag innerhalb von 14 Tagen nach Rechnungsdatum.</p>
-        <p>Als Verwendungszweck geben Sie bitte die Rechnungsnummer an.</p>
-        <p>Bankverbindung:</p>
-        ${bankBlockHtml()}
-      </div>
-    `;
-  }
-
-  let anzahlungInfo = "";
-  if (type === "auftragsbestaetigung") {
-    const anzBrutto = parseFloat(getVal("auftragsbestaetigung-anzahlung-betrag")) || 0;
-    const anzFaellig= getVal("auftragsbestaetigung-anzahlung-faellig");
-    const leistungGesamt = subtotal + totalTax;
-    const restbetrag = Math.max(0, leistungGesamt - anzBrutto);
-
-    anzahlungInfo = `
-      <div class="preview-section zahlungsblock">
-        <h3>Zahlung (Anzahlung)</h3>
-        <p style="margin-bottom:12px;">Bitte überweisen Sie die Anzahlung innerhalb von 14 Tagen nach Erstellung der Auftragsbestätigung.</p>
-        ${anzFaellig ? `<p><strong>Zahlungsziel (Anzahlung):</strong> ${formatDate(anzFaellig)}</p>` : ""}
-        <p><strong>Anzahlung:</strong> ${moneySpan(anzBrutto)}</p>
-        <p><strong>Gesamtbetrag (Leistung):</strong> ${moneySpan(leistungGesamt)}</p>
-        <p style="margin-bottom:12px;"><strong>Restbetrag (nach Anzahlung):</strong> ${moneySpan(restbetrag)}</p>
-        <p>Verwendungszweck: Bitte die Auftragsbestätigungsnummer angeben.</p>
-        <p>Bankverbindung:</p>
-        ${bankBlockHtml()}
-      </div>
-    `;
-  }
-
-  const previewHTML = `
-    <table style="width:100%; border:none; border-collapse:collapse;">
-      <tfoot style="display: table-footer-group;">
-        <tr><td style="padding:0; border:none;"><div style="height: 22mm;"></div></td></tr>
-      </tfoot>
-      <tbody style="display: table-row-group;">
-        <tr><td style="padding:0; border:none;">
-          <div class="preview-header">
-      <img src="${escapeHtml(COMPANY.logoUrl)}" alt="Warnow Moments Logo" class="preview-logo">
-      <div class="preview-company">
-        <strong>${escapeHtml(COMPANY.name)}</strong><br>
-        ${escapeHtml(COMPANY.address1)}<br>
-        ${escapeHtml(COMPANY.zipCity)}<br>
-        Tel: ${escapeHtml(COMPANY.phone)}<br>
-        E-Mail: <a href="mailto:${escapeHtml(COMPANY.email)}">${escapeHtml(COMPANY.email)}</a>
-      </div>
-    </div>
-
-    <div class="preview-section">
-      <strong>${escapeHtml(kundeName)}</strong><br>
-      ${escapeHtml(kundeAdresse)}<br>
-      ${escapeHtml(kundePlz)} ${escapeHtml(kundeOrt)}
-    </div>
-
-    <h2 class="preview-title">${docMeta.title}</h2>
-
-    <div class="preview-section">
-      <p><strong>${docMeta.numberLabel}:</strong> ${escapeHtml(docNummer)}</p>
-      <p><strong>Datum:</strong> ${formatDate(docDatum)}</p>
-      ${additionalInfo}
-    </div>
-
-    <table class="preview-table">
-      <thead>
-        <tr>
-          <th>Pos.</th>
-          <th>Beschreibung</th>
-          <th style="text-align:center;">Menge</th>
-          <th style="text-align:right;">Einzelpreis</th>
-          <th style="text-align:center;">MwSt.</th>
-          <th style="text-align:right;">Gesamt</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${tableRows || `<tr><td colspan="6" style="color:#777;">Keine Positionen vorhanden.</td></tr>`}
-        ${anzahlungRow}
-      </tbody>
-    </table>
-
-    <div style="text-align:right; margin-top:20px;">
-      <p><strong>Zwischensumme:</strong> ${moneySpan(subtotal)}</p>
-      <p><strong>MwSt.:</strong> ${moneySpan(totalTax)}</p>
-      <p class="preview-total">Gesamtbetrag: ${moneySpan(total, true)}</p>
-    </div>
-
-    ${notizen ? `<div class="preview-section"><h3>Anmerkungen</h3><p style="white-space: pre-line;">${escapeHtml(notizen)}</p></div>` : ""}
-
-    ${anzahlungInfo}
-    ${zahlungsbedingungen}
-
-        </td></tr>
-      </tbody>
-    </table>
-    <div class="preview-footer">
-      <p>${escapeHtml(COMPANY.name)} | Geschäftsführer: Christoph Völz, Jens Lindloff-Rühse | Steuernummer: xxx xxx</p>
-      <p>Sitz der Gesellschaft: Rostock | Registergericht: Amtsgericht Rostock | Handelsregisternummer: HRB 17240</p>
-    </div>
-  `;
-
-  const previewContainer = document.getElementById(`${type}-preview`);
-  previewContainer.innerHTML = previewHTML;
-  previewContainer.classList.add("active");
-  previewContainer.scrollIntoView({behavior:"smooth"});
-}
-
-function formatDate(dateString) {
-  if (!dateString) return "";
-  const d = new Date(dateString);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("de-DE", { day:"2-digit", month:"2-digit", year:"numeric" });
-}
-function formatQty(n) {
-  const x = Number(n);
-  if (!isFinite(x)) return "0";
-  if (Math.abs(x - Math.round(x)) < 1e-9) return String(Math.round(x));
-  return x.toString();
-}
-
-function printDocument() { window.print(); }
-
-
-/* WMK_CAL_POPUP */
-const WMK_CAL = (function(){
-  const MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
-  const WEEKDAYS = ['Mo','Di','Mi','Do','Fr','Sa','So'];
-  const RANGE = { start: '2026-01-01', end: '2028-01-01' }; // end exclusive
-
-  const STATE = { view: 'month', selectedIso: '2026-01-01', inited: false, modalId: null };
-
-  function pad2(n){ return String(n).padStart(2,'0'); }
-  function isoFromDate(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
-  function dateFromIso(s){
-    if(!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
-    const [y,m,d]=s.split('-').map(Number);
-    const dt=new Date(y,m-1,d);
-    if(isNaN(dt.getTime())) return null;
-    return dt;
-  }
-  function addDays(dt,n){ const d=new Date(dt); d.setDate(d.getDate()+n); return d; }
-  function clampIso(s){
-    const d=dateFromIso(s) || new Date(2026,0,1);
-    const min=dateFromIso(RANGE.start);
-    const max=dateFromIso('2027-12-31');
-    if(d<min) return RANGE.start;
-    if(d>max) return '2027-12-31';
-    return isoFromDate(d);
-  }
-
-  // Feiertage MV (2026/2027)
-  function easterSunday(year){
-    const a=year%19; const b=Math.floor(year/100); const c=year%100;
-    const d=Math.floor(b/4); const e=b%4; const f=Math.floor((b+8)/25);
-    const g=Math.floor((b-f+1)/3); const h=(19*a+b-d-g+15)%30;
-    const i=Math.floor(c/4); const k=c%4; const l=(32+2*e+2*i-h-k)%7;
-    const m=Math.floor((a+11*h+22*l)/451);
-    const month=Math.floor((h+l-7*m+114)/31);
-    const day=((h+l-7*m+114)%31)+1;
-    return new Date(year,month-1,day);
-  }
-  function buildHolidaysMV(year){
-    const out={};
-    const set=(d,name)=>{ out[isoFromDate(d)]=name; };
-    set(new Date(year,0,1),'Neujahr');
-    set(new Date(year,2,8),'Internationaler Frauentag');
-    set(new Date(year,4,1),'Tag der Arbeit');
-    set(new Date(year,9,3),'Tag der Deutschen Einheit');
-    set(new Date(year,9,31),'Reformationstag');
-    set(new Date(year,11,25),'Weihnachten');
-    set(new Date(year,11,26),'2. Weihnachtstag');
-    const eas=easterSunday(year);
-    set(addDays(eas,-2),'Karfreitag');
-    set(addDays(eas,1),'Ostermontag');
-    set(addDays(eas,39),'Christi Himmelfahrt');
-    set(addDays(eas,50),'Pfingstmontag');
-    return out;
-  }
-  const HOL = { ...buildHolidaysMV(2026), ...buildHolidaysMV(2027) };
-
-  function isChecked(id){ const el=document.getElementById(id); return !!(el && el.checked); }
-  function seasonClass(dateObj){
-    const md=(dateObj.getMonth()+1)*100 + dateObj.getDate();
-    return (md>=601 && md<=831) ? 'wm-season-main' : 'wm-season-off';
-  }
-  function fmtDT(ms){
-    const d=new Date(Number(ms));
-    if(isNaN(d.getTime())) return '';
-    return d.toLocaleString('de-DE',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-  }
-
-  function overlaps(aStart,aEnd,bStart,bEnd){ return aStart < bEnd && bStart < aEnd; }
-  function bookingsAll(){ return (typeof bookingLoadAll==='function') ? bookingLoadAll() : []; }
-
-  function bookingsForRange(startMs,endMs,statusFilter=null){
-    const all=bookingsAll();
-    const showRes=isChecked('cal-show-reserved');
-    const showConf=isChecked('cal-show-confirmed');
-    return (all||[]).filter(b=>{
-      if(!b) return false;
-      if(typeof BOOKING!=='undefined' && b.resourceId && b.resourceId!==BOOKING.RESOURCE_ID) return false;
-      if(!(b.status==='reserved' || b.status==='confirmed')) return false;
-      if(b.status==='reserved' && !showRes) return false;
-      if(b.status==='confirmed' && !showConf) return false;
-      if(statusFilter && b.status!==statusFilter) return false;
-      return overlaps(Number(b.startMs), Number(b.endMs), startMs, endMs);
-    }).sort((a,b)=>Number(a.startMs)-Number(b.startMs));
-  }
-
-  function dayCounts(dayStartMs, dayEndMs){
-    const rows=bookingsForRange(dayStartMs,dayEndMs,null);
-    let reserved=0, confirmed=0;
-    for(const b of rows){
-      if(b.status==='reserved') reserved++;
-      if(b.status==='confirmed') confirmed++;
-    }
-    return {reserved, confirmed};
-  }
-
-  function monthRangeMs(y,m){
-    const start=new Date(y,m,1,0,0,0,0).getTime();
-    const end=new Date(y,m+1,1,0,0,0,0).getTime();
-    return {start,end};
-  }
-
-  function monthBookings(y,m){
-    const r=monthRangeMs(y,m);
-    return bookingsForRange(r.start,r.end,null);
-  }
-
-  function initOnce(){
-    if(STATE.inited) return;
-    STATE.inited=true;
-
-    const now=new Date();
-    if(now.getFullYear()===2026 || now.getFullYear()===2027){
-      STATE.selectedIso=isoFromDate(now);
-    }
-
-    ['cal-show-reserved','cal-show-confirmed','cal-show-holidays','cal-show-seasons'].forEach(id=>{
-      const cb=document.getElementById(id);
-      if(cb) cb.addEventListener('change', render);
-    });
-
-    const modal=document.getElementById('wm-modal');
-    if(modal) modal.addEventListener('click',(ev)=>{ if(ev.target===modal) modalClose(); });
-    const dmodal=document.getElementById('wm-day-modal');
-    if(dmodal) dmodal.addEventListener('click',(ev)=>{ if(ev.target===dmodal) dayModalClose(); });
-
-    document.addEventListener('keydown',(ev)=>{
-      if(ev.key==='Escape'){ dayModalClose(); modalClose(); }
-    });
-  }
-
-  function updateViewButtons(){
-    document.querySelectorAll('.wmk-viewbtn').forEach(btn=>{
-      btn.classList.toggle('active', (btn.getAttribute('data-view')===STATE.view));
-    });
-  }
-
-  function setView(view){
-    STATE.view=view;
-    updateViewButtons();
-    render();
-  }
-
-  function selectIso(s){ STATE.selectedIso=clampIso(s); }
-
-  // --- Popups ---
-  function modalClose(){
-    const m=document.getElementById('wm-modal');
-    if(m) m.classList.remove('open');
-    STATE.modalId=null;
-  }
-
-  function modalOpen(b){
-    if(!b) return;
-    STATE.modalId=b.id||null;
-
-    const statusLabel=(b.status==='confirmed')?'Bestätigt':'Reserviert';
-    const badge=(b.status==='confirmed')?'<span class="wm-badge green">Bestätigt</span>':'<span class="wm-badge orange">Reserviert</span>';
-
-    const el=(id)=>document.getElementById(id);
-    if(el('wm-modal-status')) el('wm-modal-status').innerHTML = (typeof escapeHtml==='function'?escapeHtml(statusLabel):statusLabel) + ' ' + badge;
-    if(el('wm-modal-range')) el('wm-modal-range').textContent = fmtDT(b.startMs) + ' – ' + fmtDT(b.endMs);
-    if(el('wm-modal-customer')) el('wm-modal-customer').textContent = String(b.customer||'');
-    if(el('wm-modal-ref')) el('wm-modal-ref').textContent = String(b.ref||'');
-    if(el('wm-modal-note')) el('wm-modal-note').textContent = String(b.note||'');
-    if(el('wm-modal-id')) el('wm-modal-id').textContent = String(b.id||'');
-
-    const m=document.getElementById('wm-modal');
-    if(m) m.classList.add('open');
-  }
-
-  function dayModalClose(){
-    const m=document.getElementById('wm-day-modal');
-    if(m) m.classList.remove('open');
-  }
-
-  function openBookingOrList(dateIso,statusFilter){
-    const d=dateFromIso(dateIso);
-    if(!d) return;
-    const dayStart=new Date(d.getFullYear(),d.getMonth(),d.getDate(),0,0,0,0).getTime();
-    const dayEnd=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1,0,0,0,0).getTime();
-    const rows=bookingsForRange(dayStart,dayEnd,statusFilter);
-    if(rows.length===1){
-      modalOpen(rows[0]);
+  function buildSlotButtons(dayISO, hours){
+    calSlotsEl.innerHTML = "";
+    if(!hours.length){
+      const span = document.createElement("span");
+      span.className = "muted";
+      span.textContent = "Leider keine Startzeiten mehr für dieses Paket frei.";
+      calSlotsEl.appendChild(span);
       return;
     }
-    dayModalOpen(dateIso,statusFilter);
+    hours.forEach(h => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn-slot";
+      btn.textContent = fmtTime(h);
+      btn.addEventListener("click", () => {
+        startEl.value = fmtTime(h);
+        updateSlotButtonVisuals();
+        updateCtas();
+        if(errEl.style.display === "block") setError("");
+      });
+      calSlotsEl.appendChild(btn);
+    });
+    updateSlotButtonVisuals();
   }
 
-  function dayModalOpen(dateIso,statusFilter=null){
-    const d=dateFromIso(dateIso);
-    if(!d) return;
-    const dayStart=new Date(d.getFullYear(),d.getMonth(),d.getDate(),0,0,0,0).getTime();
-    const dayEnd=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1,0,0,0,0).getTime();
-    const rows=bookingsForRange(dayStart,dayEnd,statusFilter);
+  async function showDaySlots(dayISO){
+    calDayTitleEl.textContent = `Wähle eine freie Startzeit:`;
+    calSlotsEl.innerHTML = "";
+    try{
+      const sunset = getSunsetRostock(dayISO);
+      const duration = Number(pkgEl.value);
+      const { allowed } = computeAllowedStartHours(dayISO, sunset, duration);
+      buildSlotButtons(dayISO, filterByBookings(dayISO, duration, allowed));
+    } catch(e){
+      const span = document.createElement("span");
+      span.className = "muted";
+      span.textContent = "Startzeiten konnten nicht berechnet werden.";
+      calSlotsEl.appendChild(span);
+    }
+    renderBlocksList(dayISO);
+    renderTimeline(dayISO);
+  }
 
-    const title=document.getElementById('wm-day-modal-title');
-    const sub=document.getElementById('wm-day-modal-sub');
-    const body=document.getElementById('wm-day-modal-body');
+  async function renderCalendar(){
+    const year = calCursor.getFullYear(), month = calCursor.getMonth();
+    await loadHolidaysForYear(year);
+    const holidayMap = holidayByYear.get(year) || new Map();
 
-    const suffix = statusFilter==='confirmed' ? ' (Bestätigt)' : statusFilter==='reserved' ? ' (Reserviert)' : '';
-    if(title) title.textContent = `Einträge: ${d.toLocaleDateString('de-DE')}${suffix}`;
-    if(sub) sub.textContent = rows.length ? `${rows.length} Eintrag(e).` : 'Keine Einträge (gemäß Filter).';
+    if(calTitleEl) calTitleEl.textContent = calCursor.toLocaleDateString("de-DE", { month:"long", year:"numeric" });
 
-    if(body){
-      body.innerHTML='';
-      if(!rows.length){
-        const tr=document.createElement('tr');
-        tr.innerHTML='<td colspan="5" class="hint">Keine Reservierungen/Buchungen an diesem Tag.</td>';
-        body.appendChild(tr);
-      } else {
-        for(const b of rows){
-          const st=(b.status==='confirmed')?'conf':'res';
-          const stLabel=(b.status==='confirmed')?'Bestätigt':'Reserviert';
-          const tr=document.createElement('tr');
+    const firstDow = (new Date(year, month, 1).getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-          const customer=(typeof escapeHtml==='function'?escapeHtml(String(b.customer||'')):String(b.customer||''));
-          const ref=(typeof escapeHtml==='function'?escapeHtml(String(b.ref||'')):String(b.ref||''));
+    const todayISO = await getTodayISO();
+    const todayMs = new Date(todayISO + "T00:00:00").getTime();
 
-          tr.innerHTML=`
-            <td><span class="wmk-status ${st}">${stLabel}</span></td>
-            <td>${customer}</td>
-            <td>${fmtDT(b.startMs)} – ${fmtDT(b.endMs)}</td>
-            <td>${ref}</td>
-            <td>
-              <div class="wmk-actions">
-                <button class="btn btn-muted" type="button" data-act="details">Details</button>
-                <button class="btn btn-muted" type="button" data-act="edit">Bearbeiten</button>
-                <button class="btn btn-secondary" type="button" data-act="confirm">Bestätigen</button>
-                <button class="btn btn-danger" type="button" data-act="cancel">Storno</button>
-                <button class="btn btn-danger" type="button" data-act="delete">Löschen</button>
-              </div>
-            </td>
-          `;
+    const duration = Number(pkgEl.value);
 
-          const btn=(act)=>tr.querySelector(`button[data-act="${act}"]`);
-          if(btn('details')) btn('details').addEventListener('click',(ev)=>{ ev.stopPropagation(); dayModalClose(); modalOpen(b); });
-          if(btn('edit')) btn('edit').addEventListener('click',(ev)=>{ ev.stopPropagation(); dayModalClose(); modalOpen(b); editInBuchungen(); });
-          if(btn('confirm')) btn('confirm').addEventListener('click',(ev)=>{ ev.stopPropagation(); dayModalClose(); STATE.modalId=b.id; setConfirmed(); });
-          if(btn('cancel')) btn('cancel').addEventListener('click',(ev)=>{ ev.stopPropagation(); dayModalClose(); STATE.modalId=b.id; cancelBooking(); });
-          if(btn('delete')) btn('delete').addEventListener('click',(ev)=>{ ev.stopPropagation(); dayModalClose(); STATE.modalId=b.id; deleteBooking(); });
+    calGridEl.innerHTML = "";
+    ["Mo","Di","Mi","Do","Fr","Sa","So"].forEach(d => {
+      const h = document.createElement("div");
+      h.className = "muted";
+      h.style.textAlign = "center";
+      h.style.fontWeight = "800";
+      h.style.fontSize="13px";
+      h.textContent = d;
+      calGridEl.appendChild(h);
+    });
 
-          tr.style.cursor='pointer';
-          tr.addEventListener('click',()=>{ dayModalClose(); modalOpen(b); });
-          body.appendChild(tr);
-        }
-      }
+    for(let i=0; i<firstDow; i++){
+      const b = document.createElement("div");
+      calGridEl.appendChild(b);
     }
 
-    const modal=document.getElementById('wm-day-modal');
-    if(modal) modal.classList.add('open');
-  }
+    for(let day=1; day<=daysInMonth; day++){
+      const d = new Date(year, month, day); d.setHours(0,0,0,0);
+      const iso = calToISODate(d);
 
-  // --- Actions (mit bestehenden Funktionen) ---
-  function setConfirmed(){ if(!STATE.modalId) return; if(typeof bookingSetStatusAction==='function') bookingSetStatusAction(STATE.modalId,'confirmed'); render(); modalClose(); }
-  function cancelBooking(){ if(!STATE.modalId) return; if(typeof bookingSetStatusAction==='function') bookingSetStatusAction(STATE.modalId,'cancelled'); render(); modalClose(); }
-  function deleteBooking(){ if(!STATE.modalId) return; if(typeof bookingDeleteAction==='function') bookingDeleteAction(STATE.modalId); render(); modalClose(); }
+      const isPast = d.getTime() < todayMs || iso < SEASON_START;
 
-  function editInBuchungen(){
-    if(!STATE.modalId) return;
-    const b=(typeof bookingFindById==='function')?bookingFindById(STATE.modalId):null;
-    if(!b) return;
+      const cell = document.createElement("button");
+      cell.type = "button";
+      cell.className = "cal-cell";
 
-    const tab = Array.from(document.querySelectorAll('.tab')).find(t => (t.getAttribute('onclick')||'').includes("'buchungen'"));
-    switchTab('buchungen', tab ? {target:tab} : null);
+      const { reserved, confirmed } = countBlocksOnDay(iso);
 
-    const toDT=(ms)=>{ const d=new Date(Number(ms)); const pad=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
-    if(typeof setIfExists==='function'){
-      setIfExists('booking-customer', b.customer||'');
-      setIfExists('booking-ref', b.ref||'');
-      setIfExists('booking-note', b.note||'');
-      setIfExists('booking-start', toDT(b.startMs));
-      setIfExists('booking-end', toDT(b.endMs));
-      setIfExists('booking-valid-until', b.offerValidUntilIso||'');
-    }
+      const exactSunset = getSunsetRostock(iso);
+      const { allowed } = computeAllowedStartHours(iso, exactSunset, duration);
+      const freeSlots = filterByBookings(iso, duration, allowed);
 
-    const hid=document.getElementById('booking-edit-id');
-    if(hid) hid.value=String(b.id||'');
+      const isFullyBooked = freeSlots.length === 0;
+      const isPartiallyBooked = !isFullyBooked && (reserved > 0 || confirmed > 0);
 
-    const msg=document.getElementById('booking-msg');
-    if(msg && typeof escapeHtml==='function') msg.innerHTML = `<span class="status-ok">Bearbeitung aktiv: <span class="mono">${escapeHtml(String(b.id||''))}</span></span>`;
-
-    modalClose();
-  }
-
-  // --- Rendering ---
-  function renderMonth(){
-    const wrap=document.getElementById('wm-cal-native');
-    if(!wrap) return;
-
-    const cur=dateFromIso(STATE.selectedIso) || new Date(2026,0,1);
-    const y=cur.getFullYear();
-    const m=cur.getMonth();
-
-    const first=new Date(y, m, 1);
-    const last=new Date(y, m+1, 0);
-    const firstDow=(first.getDay()+6)%7;
-    const totalCells=Math.ceil((firstDow+last.getDate())/7)*7;
-
-    wrap.innerHTML='';
-
-    const title=document.createElement('div');
-    title.className='wm-cal-title';
-    title.textContent = `${MONTHS[m]} ${y}`;
-    wrap.appendChild(title);
-
-    const head=document.createElement('div');
-    head.className='wm-cal-head';
-    WEEKDAYS.forEach(w=>{ const d=document.createElement('div'); d.textContent=w; head.appendChild(d); });
-    wrap.appendChild(head);
-
-    const grid=document.createElement('div');
-    grid.className='wm-cal-grid';
-
-    const showSeasons=isChecked('cal-show-seasons');
-    const showHol=isChecked('cal-show-holidays');
-    const showRes=isChecked('cal-show-reserved');
-    const showConf=isChecked('cal-show-confirmed');
-
-    for(let cell=0; cell<totalCells; cell++){
-      const dayNum=cell-firstDow+1;
-      const d=new Date(y, m, dayNum);
-      const isOut=(dayNum<1)||(dayNum>last.getDate());
-
-      const box=document.createElement('div');
-      box.className='wm-day' + (isOut?' is-out':'');
-      if(!isOut && showSeasons) box.classList.add(seasonClass(d));
-
-      const key=isoFromDate(d);
-      if(key===STATE.selectedIso) box.classList.add('is-selected');
-
-      const top=document.createElement('div');
-      top.className='wm-daynum';
-      top.textContent=String(d.getDate());
-      box.appendChild(top);
-
-      if(!isOut && showHol && HOL[key]){
-        const hol=document.createElement('div');
-        hol.className='wm-holiday';
-        hol.textContent=HOL[key];
-        box.appendChild(hol);
+      if(isPast) cell.setAttribute("disabled", "true");
+      else {
+        if(isFullyBooked) cell.classList.add("fully-booked");
+        else if(isPartiallyBooked) cell.classList.add("partially-booked");
       }
 
-      if(!isOut){
-        const dayStart=new Date(d.getFullYear(),d.getMonth(),d.getDate(),0,0,0,0).getTime();
-        const dayEnd=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1,0,0,0,0).getTime();
-        const cnt=dayCounts(dayStart,dayEnd);
+      if(iso === todayISO && !isPast) cell.classList.add("today");
+      if(calSelectedISO === iso) cell.classList.add("selected");
 
-        const badges=document.createElement('div');
-        badges.className='wm-badges';
+      const num = document.createElement("div");
+      num.className = "cal-num";
+      num.textContent = day;
+      cell.appendChild(num);
 
-        if(showConf && cnt.confirmed>0){
-          const b=document.createElement('div');
-          b.className='wm-badge-mini conf';
-          b.innerHTML=`Buchung <span>${cnt.confirmed}</span>`;
-          b.addEventListener('click',(ev)=>{ ev.stopPropagation(); openBookingOrList(key,'confirmed'); });
-          badges.appendChild(b);
-        }
-        if(showRes && cnt.reserved>0){
-          const b=document.createElement('div');
-          b.className='wm-badge-mini res';
-          b.innerHTML=`Reserv. <span>${cnt.reserved}</span>`;
-          b.addEventListener('click',(ev)=>{ ev.stopPropagation(); openBookingOrList(key,'reserved'); });
-          badges.appendChild(b);
-        }
-        if(badges.childNodes.length) box.appendChild(badges);
-
-        box.addEventListener('click', ()=>{ selectIso(key); STATE.view='day'; updateViewButtons(); render(); });
+      const hol = holidayMap.get(iso);
+      if(hol){
+        const hEl = document.createElement("div");
+        hEl.className = "holiday-label";
+        hEl.textContent = hol;
+        cell.appendChild(hEl);
+        cell.title = hol;
       }
 
-      grid.appendChild(box);
-    }
-
-    wrap.appendChild(grid);
-  }
-
-  function mondayOfWeek(d){ const day=(d.getDay()+6)%7; return addDays(new Date(d.getFullYear(),d.getMonth(),d.getDate()), -day); }
-
-  function renderWeek(){
-    const wrap=document.getElementById('wm-cal-native');
-    if(!wrap) return;
-
-    const d0=dateFromIso(STATE.selectedIso) || new Date(2026,0,1);
-    const mon=mondayOfWeek(d0);
-
-    wrap.innerHTML='';
-    const title=document.createElement('div');
-    title.className='wm-cal-title';
-    const sun=addDays(mon,6);
-    title.textContent = `Woche: ${mon.toLocaleDateString('de-DE')} – ${sun.toLocaleDateString('de-DE')}`;
-    wrap.appendChild(title);
-
-    const head=document.createElement('div');
-    head.className='wm-cal-head';
-    WEEKDAYS.forEach(w=>{ const x=document.createElement('div'); x.textContent=w; head.appendChild(x); });
-    wrap.appendChild(head);
-
-    const grid=document.createElement('div');
-    grid.className='wm-cal-grid';
-
-    const showSeasons=isChecked('cal-show-seasons');
-    const showHol=isChecked('cal-show-holidays');
-    const showRes=isChecked('cal-show-reserved');
-    const showConf=isChecked('cal-show-confirmed');
-
-    for(let i=0;i<7;i++){
-      const d=addDays(mon,i);
-      const key=isoFromDate(d);
-      const inRange=(key>='2026-01-01' && key<='2027-12-31');
-
-      const box=document.createElement('div');
-      box.className='wm-day' + (!inRange?' is-out':'');
-      if(inRange && showSeasons) box.classList.add(seasonClass(d));
-      if(key===STATE.selectedIso) box.classList.add('is-selected');
-
-      const top=document.createElement('div');
-      top.className='wm-daynum';
-      top.textContent=`${d.getDate()}.${pad2(d.getMonth()+1)}.`;
-      box.appendChild(top);
-
-      if(inRange && showHol && HOL[key]){
-        const hol=document.createElement('div');
-        hol.className='wm-holiday';
-        hol.textContent=HOL[key];
-        box.appendChild(hol);
+      if(reserved || confirmed){
+        const badge = document.createElement("div");
+        badge.className = "cal-badge";
+        const parts = [];
+        if(confirmed) parts.push(`${confirmed} geb.`);
+        if(reserved) parts.push(`${reserved} res.`);
+        badge.textContent = parts.join(" | ");
+        cell.appendChild(badge);
       }
 
-      if(inRange){
-        const dayStart=new Date(d.getFullYear(),d.getMonth(),d.getDate(),0,0,0,0).getTime();
-        const dayEnd=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1,0,0,0,0).getTime();
-        const cnt=dayCounts(dayStart,dayEnd);
+      cell.addEventListener("click", async () => {
+        if(isPast) return;
+        calSelectedISO = iso;
+        await renderCalendar();
+        dateEl.value = iso;
+        await refresh();
+        showDaySlots(iso);
+      });
 
-        const badges=document.createElement('div');
-        badges.className='wm-badges';
-
-        if(showConf && cnt.confirmed>0){
-          const b=document.createElement('div');
-          b.className='wm-badge-mini conf';
-          b.innerHTML=`Buchung <span>${cnt.confirmed}</span>`;
-          b.addEventListener('click',(ev)=>{ ev.stopPropagation(); openBookingOrList(key,'confirmed'); });
-          badges.appendChild(b);
-        }
-        if(showRes && cnt.reserved>0){
-          const b=document.createElement('div');
-          b.className='wm-badge-mini res';
-          b.innerHTML=`Reserv. <span>${cnt.reserved}</span>`;
-          b.addEventListener('click',(ev)=>{ ev.stopPropagation(); openBookingOrList(key,'reserved'); });
-          badges.appendChild(b);
-        }
-        if(badges.childNodes.length) box.appendChild(badges);
-
-        box.addEventListener('click', ()=>{ selectIso(key); STATE.view='day'; updateViewButtons(); render(); });
-      }
-
-      grid.appendChild(box);
+      calGridEl.appendChild(cell);
     }
-
-    wrap.appendChild(grid);
   }
 
-  function renderDay(){
-    const wrap=document.getElementById('wm-cal-native');
-    if(!wrap) return;
+  calPrevEl?.addEventListener("click", async () => { calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()-1, 1); await renderCalendar(); });
+  calNextEl?.addEventListener("click", async () => { calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()+1, 1); await renderCalendar(); });
 
-    const d=dateFromIso(STATE.selectedIso) || new Date(2026,0,1);
-    const key=isoFromDate(d);
+  calTodayEl?.addEventListener("click", async () => {
+    const startISO = await getTodayISO();
+    calCursor = new Date(startISO + "T00:00:00");
+    calCursor.setDate(1);
+    calCursor.setHours(0,0,0,0);
+    calSelectedISO = startISO;
+    await renderCalendar();
+    dateEl.value = startISO;
+    await refresh();
+    showDaySlots(startISO);
+  });
 
-    wrap.innerHTML='';
+  pkgEl?.addEventListener("change", async () => {
+    await renderCalendar();
+    await refresh();
+    if(calSelectedISO) showDaySlots(calSelectedISO);
+  });
 
-    const title=document.createElement('div');
-    title.className='wm-cal-title';
-    title.textContent=d.toLocaleDateString('de-DE',{weekday:'long',year:'numeric',month:'long',day:'2-digit'});
-    wrap.appendChild(title);
+  ctaEl?.addEventListener("click", submitReservation);
+  tipCloseEl?.addEventListener("click", tipClose);
 
-    const line=document.createElement('div');
-    line.className='hint';
-    line.textContent='Klick auf einen Eintrag öffnet Details als Popup.';
-    wrap.appendChild(line);
-
-    const tbl=document.createElement('table');
-    tbl.className='wmk-list';
-    tbl.innerHTML='<thead><tr><th>Status</th><th>Kunde</th><th>Zeitraum</th><th>Referenz</th></tr></thead>';
-    const tb=document.createElement('tbody');
-
-    const dayStart=new Date(d.getFullYear(),d.getMonth(),d.getDate(),0,0,0,0).getTime();
-    const dayEnd=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1,0,0,0,0).getTime();
-    const rows=bookingsForRange(dayStart,dayEnd,null);
-
-    if(!rows.length){
-      const tr=document.createElement('tr');
-      tr.innerHTML='<td colspan="4" class="hint">Keine Reservierungen/Buchungen an diesem Tag.</td>';
-      tb.appendChild(tr);
-    } else {
-      for(const b of rows){
-        const st=(b.status==='confirmed')?'conf':'res';
-        const stLabel=(b.status==='confirmed')?'Bestätigt':'Reserviert';
-        const tr=document.createElement('tr');
-        tr.style.cursor='pointer';
-        tr.innerHTML=`
-          <td><span class="wmk-status ${st}">${stLabel}</span></td>
-          <td>${(typeof escapeHtml==='function'?escapeHtml(String(b.customer||'')):String(b.customer||''))}</td>
-          <td>${fmtDT(b.startMs)} – ${fmtDT(b.endMs)}</td>
-          <td>${(typeof escapeHtml==='function'?escapeHtml(String(b.ref||'')):String(b.ref||''))}</td>
-        `;
-        tr.addEventListener('click', ()=>{ modalOpen(b); });
-        tb.appendChild(tr);
-      }
-    }
-
-    tbl.appendChild(tb);
-    wrap.appendChild(tbl);
+  let resizeTimeout;
+  function wmPostHeight(){
+    const h = Math.max(
+      document.documentElement.scrollHeight,
+      document.body?.scrollHeight || 0,
+      document.documentElement.offsetHeight,
+      document.body?.offsetHeight || 0
+    ) + 30;
+    window.parent?.postMessage({ type: "wm-iframe-height", height: h }, "*");
   }
 
-  function renderListMonth(){
-    const wrap=document.getElementById('wm-cal-native');
-    if(!wrap) return;
+  async function init(){
+    try {
+      await setTodayDate();
+      const startISO = dateEl.value || await getTodayISO();
+      calCursor = new Date(startISO + "T00:00:00");
+      calCursor.setDate(1);
+      calCursor.setHours(0,0,0,0);
 
-    const cur=dateFromIso(STATE.selectedIso) || new Date(2026,0,1);
-    const y=cur.getFullYear();
-    const m=cur.getMonth();
+      await Promise.all([ loadPublicCalendar(), loadHolidaysForYear(new Date().getFullYear()) ]);
+      await renderCalendar();
+      await refresh();
+      if(calSelectedISO) showDaySlots(calSelectedISO);
+      updateCtas();
 
-    wrap.innerHTML='';
-
-    const title=document.createElement('div');
-    title.className='wm-cal-title';
-    title.textContent=`Liste: ${MONTHS[m]} ${y}`;
-    wrap.appendChild(title);
-
-    const tbl=document.createElement('table');
-    tbl.className='wmk-list';
-    tbl.innerHTML='<thead><tr><th>Status</th><th>Kunde</th><th>Zeitraum</th><th>Referenz</th><th>Notiz</th></tr></thead>';
-    const tb=document.createElement('tbody');
-
-    const rows=monthBookings(y,m);
-    if(!rows.length){
-      const tr=document.createElement('tr');
-      tr.innerHTML='<td colspan="5" class="hint">Keine Reservierungen/Buchungen in diesem Monat (gemäß aktueller Filter).</td>';
-      tb.appendChild(tr);
-    } else {
-      for(const b of rows){
-        const st=(b.status==='confirmed')?'conf':'res';
-        const stLabel=(b.status==='confirmed')?'Bestätigt':'Reserviert';
-        const tr=document.createElement('tr');
-        tr.style.cursor='pointer';
-        tr.innerHTML=`
-          <td><span class="wmk-status ${st}">${stLabel}</span></td>
-          <td>${(typeof escapeHtml==='function'?escapeHtml(String(b.customer||'')):String(b.customer||''))}</td>
-          <td>${fmtDT(b.startMs)} – ${fmtDT(b.endMs)}</td>
-          <td>${(typeof escapeHtml==='function'?escapeHtml(String(b.ref||'')):String(b.ref||''))}</td>
-          <td>${(typeof escapeHtml==='function'?escapeHtml(String(b.note||'')):String(b.note||''))}</td>
-        `;
-        tr.addEventListener('click', ()=>{ modalOpen(b); });
-        tb.appendChild(tr);
-      }
-    }
-
-    tbl.appendChild(tb);
-    wrap.appendChild(tbl);
-  }
-
-  function render(){
-    initOnce();
-    updateViewButtons();
-    if(STATE.view==='month') return renderMonth();
-    if(STATE.view==='week') return renderWeek();
-    if(STATE.view==='day') return renderDay();
-    if(STATE.view==='list') return renderListMonth();
-    return renderMonth();
-  }
-
-  // --- Navigation ---
-  function shiftSelected(days){
-    const d=dateFromIso(STATE.selectedIso) || new Date(2026,0,1);
-    selectIso(isoFromDate(addDays(d,days)));
-  }
-
-  function prev(){
-    const d=dateFromIso(STATE.selectedIso) || new Date(2026,0,1);
-    if(STATE.view==='month' || STATE.view==='list'){
-      const n=new Date(d.getFullYear(), d.getMonth(), 1);
-      n.setMonth(n.getMonth()-1);
-      selectIso(isoFromDate(n));
-      render();
-      return;
-    }
-    if(STATE.view==='week'){ shiftSelected(-7); render(); return; }
-    if(STATE.view==='day'){ shiftSelected(-1); render(); return; }
-    shiftSelected(-1); render();
-  }
-
-  function next(){
-    const d=dateFromIso(STATE.selectedIso) || new Date(2026,0,1);
-    if(STATE.view==='month' || STATE.view==='list'){
-      const n=new Date(d.getFullYear(), d.getMonth(), 1);
-      n.setMonth(n.getMonth()+1);
-      selectIso(isoFromDate(n));
-      render();
-      return;
-    }
-    if(STATE.view==='week'){ shiftSelected(7); render(); return; }
-    if(STATE.view==='day'){ shiftSelected(1); render(); return; }
-    shiftSelected(1); render();
-  }
-
-  function today(){
-    const now=new Date();
-    const d=(now.getFullYear()===2026 || now.getFullYear()===2027) ? now : new Date(2026,0,1);
-    selectIso(isoFromDate(d));
-    render();
-  }
-
-  return {
-    setView, render, prev, next, today,
-    modalOpen, modalClose,
-    dayModalOpen, dayModalClose,
-    setConfirmed, cancelBooking, deleteBooking, editInBuchungen
-  };
-})();
-
-// Auto-Start (FÜGE HINZU)
-
-
-
-// ===== SUPABASE & AUTH & INIT =====
-var sb;
-window.addEventListener('load', async () => {
-    // Basic init stuff
-    const today = new Date().toISOString().split("T")[0];
-    setIfExists("angebot-datum", today);
-    setIfExists("auftragsbestaetigung-datum", today);
-    setIfExists("rechnung-datum", today);
-    setTextareaIfEmpty("angebot-notizen", defaultTextAngebot());
-    setTextareaIfEmpty("auftragsbestaetigung-notizen", defaultTextAuftragsbestaetigung());
-    setTextareaIfEmpty("rechnung-notizen", defaultTextRechnung());
-    addItem("angebot");
-    addItem("rechnung");
-    if (typeof bookingRefreshUI === 'function') bookingRefreshUI();
-    updateOfferBookingCheck(false);
-
-    if (typeof supabase !== 'undefined') {
-        const { createClient } = supabase;
-        sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        console.log('✅ Supabase ready');
-
-        sb.auth.onAuthStateChange((event, session) => {
-            console.log('Auth event:', event);
-            if (session) {
-                const overlay = document.getElementById('gateOverlay');
-                if (overlay) overlay.style.setProperty('display', 'none', 'important');
-                if (typeof bookingRefreshUI === 'function') bookingRefreshUI();
-            } else {
-                const overlay = document.getElementById('gateOverlay');
-                if (overlay) overlay.style.setProperty('display', 'flex', 'important');
-            }
+      if ("ResizeObserver" in window) {
+        const ro = new ResizeObserver(() => {
+          clearTimeout(resizeTimeout);
+          resizeTimeout = setTimeout(wmPostHeight, 50);
         });
-
-        const { data: { session } } = await sb.auth.getSession();
-        if (session) {
-            const overlay = document.getElementById('gateOverlay');
-            if (overlay) overlay.style.setProperty('display', 'none', 'important');
-            if (typeof bookingRefreshUI === 'function') bookingRefreshUI();
-        }
-    } else {
-        console.error('❌ Supabase CDN nicht geladen');
+        ro.observe(document.documentElement);
+      }
+      wmPostHeight();
+    } catch(e) {
+      setError("Initialisierung fehlgeschlagen. Bitte Seite neu laden.");
     }
-
-    const firstTab = document.querySelector('.tab');
-    if (firstTab && typeof switchTab === 'function') switchTab(firstTab, 'angebot-panel');
-});
-
-async function login() {
-  const emailEl = document.getElementById('loginEmail');
-  const passEl = document.getElementById('loginPassword');
-  const statusEl = document.getElementById('authStatus');
-  if (!emailEl || !passEl) return;
-  if (!emailEl.value || !passEl.value) {
-    statusEl.innerHTML = '<span style="color:#c62828;font-weight:bold;">Bitte E-Mail und Passwort eingeben.</span>';
-    return;
-  }
-  statusEl.innerHTML = 'Prüfe Daten...';
-  try {
-      const { data, error } = await sb.auth.signInWithPassword({ email: emailEl.value, password: passEl.value });
-      if (error) statusEl.innerHTML = `<span style="color:#c62828;font-weight:bold;">Fehler: ${error.message}</span>`;
-      else statusEl.innerHTML = '<span style="color:#2e7d32;font-weight:bold;">Erfolgreich!</span>';
-  } catch (err) { statusEl.innerHTML = `<span style="color:#c62828;font-weight:bold;">Netzwerk-Fehler!</span>`; }
-}
-
-async function logout() {
-  if (!confirm("Möchtest du dich wirklich abmelden?")) return;
-  try {
-    if (sb) await sb.auth.signOut();
-    localStorage.removeItem('supabase.auth.token');
-    sessionStorage.clear();
-    const overlay = document.getElementById('gateOverlay');
-    if (overlay) overlay.style.setProperty('display', 'flex', 'important');
-    document.getElementById('loginPassword').value = '';
-    document.getElementById('authStatus').innerText = 'Abgemeldet.';
-  } catch(e) { console.error("Logout Fehler", e); }
-}
-
-function switchTab(a, b) {
-  let clickedEl = null;
-  let targetId = null;
-  if (typeof a === 'string') {
-    targetId = a.endsWith('-panel') ? a : (a + '-panel');
-    if (b && b.target) clickedEl = b.target;
-  } else {
-    clickedEl = a || null;
-    targetId = String(b || '');
-  }
-  document.querySelectorAll('.document-panel').forEach(p => p.classList.remove('active'));
-  const panel = targetId ? document.getElementById(targetId) : null;
-  if (panel) panel.classList.add('active');
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  if (clickedEl && clickedEl.classList) clickedEl.classList.add('active');
-  if (targetId === 'buchungen-panel' && typeof bookingRefreshUI === 'function') bookingRefreshUI();
-  if (targetId === 'kalender-panel' && typeof WMK_CAL !== 'undefined' && WMK_CAL && typeof WMK_CAL.render === 'function') setTimeout(() => WMK_CAL.render(), 0);
-}
-
-
-// NEUE EDIT-FUNKTIONEN
-function toDT(ms) {
-  if (!ms) return '';
-  const d = new Date(ms);
-  return d.toISOString().slice(0,16);
-}
-
-function bookingEditAction(id) {
-  const b = bookingFindById(id);
-  if (!b) { 
-    alert('Buchung nicht gefunden'); 
-    return; 
   }
 
-  document.getElementById('booking-customer').value = b.customer || '';
-  document.getElementById('booking-ref').value = b.ref || '';
-  document.getElementById('booking-note').value = b.note || '';
-  document.getElementById('booking-start').value = toDT(b.startMs);
-  document.getElementById('booking-end').value = toDT(b.endMs);
-  document.getElementById('booking-valid-until').value = b.offerValidUntilIso || '';
-  document.getElementById('booking-edit-id').value = String(b.id);
-
-  const msgEl = document.getElementById('booking-msg');
-  if (msgEl) {
-    msgEl.innerHTML = '<span class="status-ok">Bearbeitung: <span class="mono">' + escapeHtml(String(b.id)) + '</span></span>';
-  }
-
-  switchTab('buchungen-panel');
-}
-
-function bookingUpdateFromForm() {
-  const editId = document.getElementById("booking-edit-id") ? document.getElementById("booking-edit-id").value.trim() : "";
-  if (!editId) { 
-    alert('Keine Buchung ausgewählt! Bitte erst bei einer Buchung auf "Bearbeiten" klicken.'); 
-    return; 
-  }
-
-  // Finde den aktuellen Status der Buchung, damit wir ihn nicht versehentlich ändern
-  const b = bookingFindById(editId);
-  const currentStatus = b ? b.status : 'confirmed';
-
-  bookingCreateFromForm(currentStatus, editId);
-}
-
-
-// bookingRefreshUI KOMPLETT NEU MIT EDIT BUTTONS
-function bookingRefreshUI() {
-  console.log('Buchungen UI refreshed');
-  const tbody = document.getElementById('booking-list');
-  if (!tbody) return;
-
-  const all = bookingLoadAll();
-  tbody.innerHTML = '';
-
-  all.forEach(b => {
-    if (!b || b.resourceId !== BOOKING.RESOURCE_ID) return;
-
-    const statusClass = b.status === 'confirmed' ? 'status-ok' : b.status === 'reserved' ? 'status-bad' : 'status-muted';
-    const statusText = b.status === 'confirmed' ? 'Bestätigt' : b.status === 'reserved' ? 'Reserviert' : 'Storniert';
-
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td><span class="${statusClass}">${statusText}</span></td>
-      <td>${fmtDT(b.startMs)} - ${fmtDT(b.endMs)}</td>
-      <td>${escapeHtml(b.customer)}</td>
-      <td>${escapeHtml(b.ref || '')} ${b.offerValidUntilIso ? 'bis ' + b.offerValidUntilIso : ''}</td>
-      <td class="mono">${escapeHtml(String(b.id))}</td>
-      <td>
-        <button class="btn btn-muted" type="button" onclick="bookingEditAction('${b.id.replace(/'/g, "\\'")}')">Bearbeiten</button>
-        <button class="btn btn-secondary" type="button" onclick="bookingSetStatusAction('${b.id.replace(/'/g, "\\'")}', 'confirmed')">Bestätigen</button>
-        <button class="btn btn-danger" type="button" onclick="bookingSetStatusAction('${b.id.replace(/'/g, "\\'")}', 'cancelled')">Stornieren</button>
-        <button class="btn btn-danger" type="button" onclick="bookingDeleteAction('${b.id.replace(/'/g, "\\'")}')">Löschen</button>
-      </td>
-    `;
-    tbody.appendChild(row);
-  });
-}
-
-// bookingCreateFromForm erweitern (Parameter hinzufügen)
+  init();
+})();
 </script>
 </body>
 </html>
-
