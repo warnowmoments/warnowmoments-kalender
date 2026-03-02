@@ -342,7 +342,12 @@
   const TL_START_HOUR = HOURS_MIN;
   const TL_END_HOUR = HOURS_MAX;
   const RETURN_BUFFER_MIN = 30;
-  const PUBLIC_CAL_URL = "./wm_public_calendar.json";
+    const PUBLIC_CAL_URL = '/kalender.json';
+
+  // --- SUPABASE CONFIG ---
+  const SUPABASE_URL = "https://fnktiyujyznbbhwkeyww.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_cJyOwgz2NXfDiTj7mRUVrQVMAMoVdd";
+
   const BLOCK_STATUSES = new Set(["reserved","confirmed"]);
   const WORKERURL = "https://reservierung-v2.kontakt-70d.workers.dev/";
 
@@ -426,17 +431,36 @@
     } catch(e) {}
   }
 
-  async function loadPublicCalendar(){
-    try{
-      const res = await fetch(PUBLIC_CAL_URL, { cache: "no-store" });
-      if(!res.ok) throw new Error("fetch failed");
+    async function loadPublicCalendar(){
+    try {
+      // Direkter Abruf über die Supabase REST-API
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/wm_public_calendar?select=*`, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        cache: "no-store"
+      });
+
+      if(!res.ok) throw new Error("fetch failed with status " + res.status);
+
       const data = await res.json();
-      const ev = Array.isArray(data?.events) ? data.events : [];
+      const ev = Array.isArray(data) ? data : [];
+
       publicEvents = ev
         .filter(e => e && BLOCK_STATUSES.has(String(e.status)))
-        .map(e => ({ status: String(e.status), startMs: new Date(e.start).getTime(), endMs: new Date(e.end).getTime() }))
+        .map(e => ({ 
+           status: String(e.status), 
+           startMs: new Date(e.start_time).getTime(), 
+           endMs: new Date(e.end_time).getTime() 
+        }))
         .filter(e => Number.isFinite(e.startMs) && Number.isFinite(e.endMs) && e.endMs > e.startMs);
-    } catch(e){ publicEvents = []; }
+    } catch(e){ 
+      console.error("Fehler beim Laden des Supabase-Kalenders:", e);
+      publicEvents = []; 
+    }
   }
 
   function holidayAppliesToMV(h){
