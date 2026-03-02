@@ -319,6 +319,7 @@
 </div>
 
 <!-- Turnstile Debug Callbacks -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
   window.wmTurnstileError = function(code){
     console.warn("Turnstile error:", code);
@@ -346,7 +347,7 @@
 
   // --- SUPABASE CONFIG ---
   const SUPABASE_URL = "https://fnktiyujyznbbhwkeyww.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_cJyOwgz2NXfDiTj7mRUVrQVMAMoVdd";
+  const SUPABASE_ANON_KEY = "sb_publishable_cJyOwgz2NXfDiTj7mRUVrQ_VMAMoVdd";
 
   const BLOCK_STATUSES = new Set(["reserved","confirmed"]);
   const WORKERURL = "https://reservierung-v2.kontakt-70d.workers.dev/";
@@ -431,22 +432,22 @@
     } catch(e) {}
   }
 
-    async function loadPublicCalendar(){
+      async function loadPublicCalendar(){
     try {
-      // Direkter Abruf über die Supabase REST-API
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/wm_public_calendar?select=*`, {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Content-Type': 'application/json'
-        },
-        cache: "no-store"
-      });
+      // Nutze den offiziellen Supabase-Client statt manuellem fetch, da die neuen 'sb_publishable_'-Keys 
+      // ein spezielles JWT-Handling vom Client erfordern
+      if (typeof supabase === 'undefined') {
+        throw new Error("Supabase CDN wurde nicht geladen.");
+      }
 
-      if(!res.ok) throw new Error("fetch failed with status " + res.status);
+      const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      const data = await res.json();
+      const { data, error } = await sb.from('wm_public_calendar').select('*');
+
+      if(error) throw error;
+
       console.log("Supabase Kalender-Daten:", data); // DEBUG LOG
+
       const ev = Array.isArray(data) ? data : [];
 
       publicEvents = ev
