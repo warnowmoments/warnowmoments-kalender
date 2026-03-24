@@ -269,6 +269,16 @@
         <input id="phone" type="tel" autocomplete="tel" placeholder="0151 1234567" required />
       </div>
     </div>
+    <div class="grid grid-2col" style="margin-top:16px">
+      <div>
+        <label for="address">Straße & Hausnummer</label>
+        <input id="address" type="text" autocomplete="street-address" placeholder="Musterstraße 1" required />
+      </div>
+      <div>
+        <label for="city">PLZ & Ort</label>
+        <input id="city" type="text" autocomplete="address-level2" placeholder="18055 Rostock" required />
+      </div>
+    </div>
     <div style="margin-top:16px">
       <label for="email">E‑Mail Adresse</label>
       <input id="email" type="email" autocomplete="email" placeholder="mail@beispiel.de" required />
@@ -363,6 +373,8 @@
   const nameEl = document.getElementById("name");
   const emailEl = document.getElementById("email");
   const phoneEl = document.getElementById("phone");
+  const addressEl = document.getElementById("address");
+  const cityEl = document.getElementById("city");
   const messageEl = document.getElementById("message");
   const privacyEl = document.getElementById("privacy");
   const copyCustomerEl = document.getElementById("copyCustomer");
@@ -600,6 +612,7 @@
       SQF_name: escapeText(nameEl?.value),
       SQF_email: escapeText(emailEl?.value),
       SQF_phone: escapeText(phoneEl?.value),
+      SQF_address: escapeText(addressEl?.value) + ", " + escapeText(cityEl?.value),
       SQF_message: escapeText(messageEl?.value),
       SQF_date: dateISO,
       SQF_start: startVal,
@@ -627,7 +640,7 @@
 
   function validateRequiredFields(){
     let isValid = true; let firstErrorEl = null;
-    [nameEl, emailEl, phoneEl, dateEl, pkgEl].forEach(el => { if(el) el.classList.remove("input-error"); });
+    [nameEl, emailEl, phoneEl, addressEl, cityEl, dateEl, pkgEl].forEach(el => { if(el) el.classList.remove("input-error"); });
     privacyEl.style.outline = "none";
 
     const checkField = (el, condition, msg) => {
@@ -642,6 +655,8 @@
     checkField(nameEl, nameEl.value.trim() !== "", "Bitte Name eingeben.");
     checkField(emailEl, emailEl.value.includes("@") && emailEl.value.includes("."), "Bitte gültige E-Mail eingeben.");
     checkField(phoneEl, phoneEl.value.trim() !== "", "Bitte Telefonnummer eingeben.");
+    checkField(addressEl, addressEl.value.trim() !== "", "Bitte Straße und Hausnummer eingeben.");
+    checkField(cityEl, cityEl.value.trim() !== "", "Bitte PLZ und Ort eingeben.");
     checkField(dateEl, dateEl.value !== "", "Bitte ein Datum im Kalender auswählen.");
 
     if(startEl && startEl.disabled) {
@@ -713,7 +728,7 @@
       if(res.ok){
         ctaEl.textContent = "Erfolgreich gesendet ✓";
         setCtaStatus("Vielen Dank! Ihre Anfrage wurde versendet.");
-        nameEl.value = ""; emailEl.value = ""; phoneEl.value = ""; messageEl.value = "";
+        nameEl.value = ""; emailEl.value = ""; phoneEl.value = ""; addressEl.value = ""; cityEl.value = ""; messageEl.value = "";
         privacyEl.checked = false; copyCustomerEl.checked = false;
 
         resetTurnstile();
