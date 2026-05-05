@@ -36,29 +36,83 @@ export async function onRequestPost({ request }) {
       console.error("Supabase Fehler:", dbRes.status);
     }
 
+const name = String(data.name || "").trim();
+const email = String(data.email || "").trim();
+const phone = String(data.phone || data.telefon || "").trim();
+const message = String(data.message || data.nachricht || "").trim();
+const paket = String(data.paket || "").trim();
+const dateRaw = String(data.date || data.datum || "").trim();
+const startRaw = String(data.start || data.startzeit || "").trim();
+
+const startDate = (() => {
+  const [y, m, d] = dateRaw.split("-").map(Number);
+  const [hh, mm] = startRaw.split(":").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d, hh || 0, mm || 0, 0, 0);
+})();
+
+const durationHours = paket.includes("8")
+  ? 8
+  : paket.includes("6")
+  ? 6
+  : 4;
+
+const endDate = startDate
+  ? new Date(startDate.getTime() + durationHours * 60 * 60 * 1000)
+  : null;
+
+const datumText = startDate
+  ? startDate.toLocaleDateString("de-DE", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    })
+  : (dateRaw || "-");
+
+const wochentagText = startDate
+  ? startDate.toLocaleDateString("de-DE", { weekday: "long" })
+  : "-";
+
+const startzeitText = startDate
+  ? startDate.toLocaleTimeString("de-DE", {
+      hour: "2-digit",
+      minute: "2-digit"
+    })
+  : (startRaw || "-");
+
+const endzeitText = endDate
+  ? endDate.toLocaleTimeString("de-DE", {
+      hour: "2-digit",
+      minute: "2-digit"
+    })
+  : "-";
+
     // 2. Mail senden (Mailchannels)
     const mailData = {
-      personalizations: [{
-        to: [{ email: "kontakt@warnowmoments.de" }]
-      }],
-      from: { email: data.email, name: data.name },
-      subject: `Reservierung: ${data.datum} - ${data.paket}`,
-      content: [{
-        type: "text/plain",
-        value: `
+  personalizations: [{
+    to: [{ email: "kontakt@warnowmoments.de" }]
+  }],
+  from: { email: "no-reply@mail.warnowmoments.de", name: "Warnow Moments" },
+  reply_to: { email: email, name: name },
+  subject: `Reservierung: ${name} - ${paket}`,
+  content: [{
+    type: "text/plain",
+    value: `
 NEUE RESERVIERUNG Warnow Moments!
 
-Datum: ${data.datum}
-Paket: ${data.paket} (${data.startzeit})
-Name: ${data.name}
-Email: ${data.email}
-Tel: ${data.telefon}
-Nachricht: ${data.nachricht || '-'}
+Paket: ${paket}
+Datum: ${datumText}
+Wochentag: ${wochentagText}
+Uhrzeit: ${startzeitText} bis ${endzeitText}
+Name: ${name}
+Email: ${email}
+Tel: ${phone}
+Nachricht: ${message || '-'}
 
 Supabase-ID: ${Date.now()}
-        `
-      }]
-    };
+    `.trim()
+  }]
+};
 
     const mailRes = await fetch("https://api.mailchannels.net/tx/v1/send", {
       method: "POST",
