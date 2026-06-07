@@ -269,23 +269,109 @@
         <input id="phone" type="tel" autocomplete="tel" placeholder="0151 1234567" required />
       </div>
     </div>
-    <div class="grid grid-2col" style="margin-top:16px">
-      <div>
-        <label for="address">Straße & Hausnummer</label>
-        <input id="address" type="text" autocomplete="street-address" placeholder="Musterstraße 1" required />
-      </div>
-      <div>
-        <label for="city">PLZ & Ort</label>
-        <input id="city" type="text" autocomplete="address-level2" placeholder="18055 Rostock" required />
-      </div>
-    </div>
     <div style="margin-top:16px">
       <label for="email">E‑Mail Adresse</label>
       <input id="email" type="email" autocomplete="email" placeholder="mail@beispiel.de" required />
     </div>
+    <div class="grid grid-2col" style="margin-top:16px">
+      <div>
+        <label for="persons">Anzahl Personen (Gesamt)</label>
+        <input id="persons" type="number" min="1" max="12" placeholder="z. B. 4" required style="width:100%; height: 54px; border-radius: 16px; border: 1px solid var(--c-border); padding: 0 16px; font-size: var(--fs-ui);" />
+      </div>
+      <div>
+        <label for="children">Davon Kinder</label>
+        <input id="children" type="number" min="0" max="12" value="0" style="width:100%; height: 54px; border-radius: 16px; border: 1px solid var(--c-border); padding: 0 16px; font-size: var(--fs-ui);" />
+      </div>
+    </div>
+    
+    <div id="children-ages-container" style="display:none; margin-top:16px;">
+      <label for="children-ages">Alter der Kinder</label>
+      <input id="children-ages" type="text" placeholder="z.B. 4, 8" style="width:100%;" />
+    </div>
+
+        <style>
+      /* Zusatzoptionen im Pill-Design (passend zu deinen Startzeit-Buttons) */
+      .options-pill-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .option-pill {
+        display: inline-block;
+        margin: 0;
+        cursor: pointer;
+      }
+      .option-pill input[type="checkbox"] {
+        display: none; /* Versteckt die Standard-Checkbox */
+      }
+      .option-pill span {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 999px;
+        border: 1px solid var(--c-border);
+        background: #fff;
+        color: var(--c-muted);
+        font-weight: var(--fw-regular);
+        font-size: var(--fs-ui);
+        transition: all 0.2s;
+        user-select: none;
+      }
+      .option-pill:hover span {
+        background: #f8fafc;
+        transform: translateY(-1px);
+        border-color: #cbd5e1;
+      }
+      /* Wenn angewählt (Checked State) - übernimmt dein Primary-Styling */
+      .option-pill input:checked + span {
+        background: var(--c-primary);
+        color: #fff;
+        border-color: var(--c-primary);
+        box-shadow: 0 4px 12px rgba(29,51,74,.25);
+        font-weight: var(--fw-strong);
+      }
+    </style>
+
+    <div style="margin-top:24px; margin-bottom: 24px;">
+      <label style="margin-bottom: 8px; display: block;">Zusatzoptionen (optional)</label>
+      <div class="options-pill-wrap">
+        <label class="option-pill">
+          <input type="checkbox" id="opt-dog" value="Hund">
+          <span>+ Hund</span>
+        </label>
+        <label class="option-pill">
+          <input type="checkbox" id="opt-dishes" value="Geschirrpaket">
+          <span>+ Geschirrpaket</span>
+        </label>
+        <label class="option-pill">
+          <input type="checkbox" id="opt-glasses" value="Gläserpaket">
+          <span>+ Gläserpaket</span>
+        </label>
+        <label class="option-pill">
+          <input type="checkbox" id="opt-bbq" value="Pistol Prime BBQ - Grillpaket">
+          <span>+ Grillpaket</span>
+        </label>
+        <label class="option-pill">
+          <input type="checkbox" id="opt-snacks" value="Matrosenbox - Snacks">
+          <span>+ Snacks</span>
+        </label>
+        <label class="option-pill">
+          <input type="checkbox" id="opt-clean" value="Grillendreinigung">
+          <span>+ Grillendreinigung</span>
+        </label>
+        <label class="option-pill">
+          <input type="checkbox" id="opt-music" value="Musikbox">
+          <span>+ Musikbox</span>
+        </label>
+        <label class="option-pill">
+          <input type="checkbox" id="opt-cool" value="Kühlbox">
+          <span>+ Kühlbox</span>
+        </label>
+      </div>
+    </div>
     <div style="margin-top:16px">
       <label for="message">Nachricht</label>
-      <textarea id="message" placeholder="Optional: z.B. Teilnehmerzahl, besondere Wünsche, Rückfragen …"></textarea>
+      <textarea id="message" placeholder="Optional: z.B. besondere Wünsche, Rückfragen …"></textarea>
     </div>
 
     <div class="checkbox-row" style="margin-top: 24px;">
@@ -323,7 +409,7 @@
     </div>
 
     <p class="muted" style="margin-top:20px; text-align: center; font-size: 13px;">
-      Hinweis: Bitte ca. 15 Minuten vor Start für Einweisung vor Ort sein. Rückgabe/Anlegen erfolgt nach der Fahrt (ca. 15 Min. eingeplant).
+      Hinweis: Bitte ca. 30 Minuten vor Start für Einweisung vor Ort sein. Rückgabe/Anlegen erfolgt nach der Fahrt (ca. 30 Min. eingeplant).
     </p>
   </div>
 </div>
@@ -373,8 +459,10 @@
   const nameEl = document.getElementById("name");
   const emailEl = document.getElementById("email");
   const phoneEl = document.getElementById("phone");
-  const addressEl = document.getElementById("address");
-  const cityEl = document.getElementById("city");
+  const personsEl = document.getElementById("persons");
+  const childrenEl = document.getElementById("children");
+  const childrenAgesContainer = document.getElementById("children-ages-container");
+  const childrenAgesEl = document.getElementById("children-ages");
   const messageEl = document.getElementById("message");
   const privacyEl = document.getElementById("privacy");
   const copyCustomerEl = document.getElementById("copyCustomer");
@@ -553,14 +641,26 @@
     return false;
   }
 
-  function filterByBookings(dateISO, durationHours, hours){
+    function filterByBookings(dateISO, durationHours, hours){
     const ok = [];
+    const bufferMs = RETURN_BUFFER_MIN * 60 * 1000; // 30 Min Puffer in Millisekunden
     for(const h of hours){
       const start = new Date(dateISO + "T00:00:00");
       start.setHours(h,0,0,0);
       const startMs = start.getTime();
       const endMs = startMs + durationHours*60*60*1000;
-      if(!isBlockedByPublicEvents(startMs, endMs)) ok.push(h);
+      
+      let hasOverlap = false;
+      for(const e of publicEvents){
+        // Puffer zu den bestehenden Buchungen addieren/subtrahieren
+        const blockedStart = e.startMs - bufferMs;
+        const blockedEnd = e.endMs + bufferMs;
+        if(rangesOverlap(startMs, endMs, blockedStart, blockedEnd)){
+          hasOverlap = true;
+          break;
+        }
+      }
+      if(!hasOverlap) ok.push(h);
     }
     return ok;
   }
@@ -608,16 +708,24 @@
       return;
     }
     const wantsCopy = copyCustomerEl?.checked ? "Ja" : "Nein";
+    const options = [];
+    ['dog', 'dishes', 'glasses', 'bbq', 'snacks', 'clean', 'music', 'cool'].forEach(id => {
+      const cb = document.getElementById('opt-' + id);
+      if (cb && cb.checked) options.push(cb.value);
+    });
     lastPayload = {
       SQF_name: escapeText(nameEl?.value),
       SQF_email: escapeText(emailEl?.value),
       SQF_phone: escapeText(phoneEl?.value),
-      SQF_address: escapeText(addressEl?.value) + ", " + escapeText(cityEl?.value),
       SQF_message: escapeText(messageEl?.value),
       SQF_date: dateISO,
       SQF_start: startVal,
       SQF_paket: pkgLabel,
       SQF_copyToCustomer: wantsCopy,
+      SQF_persons: escapeText(personsEl?.value),
+      SQF_children: escapeText(childrenEl?.value),
+      SQF_children_ages: escapeText(childrenAgesEl?.value),
+      SQF_options: options.join(", "),
       date: dateISO, start: startVal, paket: pkgLabel, source: "wm-pages", page: location.href
     };
     selectedPillEl.textContent = `Auswahl: ${dateISO} • ${pkgLabel} • ${startVal}`;
@@ -640,7 +748,7 @@
 
   function validateRequiredFields(){
     let isValid = true; let firstErrorEl = null;
-    [nameEl, emailEl, phoneEl, addressEl, cityEl, dateEl, pkgEl].forEach(el => { if(el) el.classList.remove("input-error"); });
+    [nameEl, emailEl, phoneEl, dateEl, pkgEl].forEach(el => { if(el) el.classList.remove("input-error"); });
     privacyEl.style.outline = "none";
 
     const checkField = (el, condition, msg) => {
@@ -655,9 +763,8 @@
     checkField(nameEl, nameEl.value.trim() !== "", "Bitte Name eingeben.");
     checkField(emailEl, emailEl.value.includes("@") && emailEl.value.includes("."), "Bitte gültige E-Mail eingeben.");
     checkField(phoneEl, phoneEl.value.trim() !== "", "Bitte Telefonnummer eingeben.");
-    checkField(addressEl, addressEl.value.trim() !== "", "Bitte Straße und Hausnummer eingeben.");
-    checkField(cityEl, cityEl.value.trim() !== "", "Bitte PLZ und Ort eingeben.");
     checkField(dateEl, dateEl.value !== "", "Bitte ein Datum im Kalender auswählen.");
+    checkField(personsEl, personsEl.value.trim() !== "" && parseInt(personsEl.value) > 0, "Bitte die Anzahl der Personen angeben.");
 
     if(startEl && startEl.disabled) {
       if(!firstErrorEl) { firstErrorEl = pkgEl; setError("An diesem Tag ist leider keine Zeit für das Paket mehr frei."); }
@@ -676,7 +783,7 @@
     return isValid;
   }
 
-  [nameEl, emailEl, phoneEl].forEach(el => {
+    [nameEl, emailEl, phoneEl, personsEl].forEach(el => {
     el?.addEventListener("input", () => {
       el.classList.remove("input-error");
       if(errEl.style.display === "block") setError("");
@@ -687,6 +794,16 @@
     if(errEl.style.display === "block") setError("");
   });
   copyCustomerEl?.addEventListener("change", updateCtas);
+
+    childrenEl?.addEventListener("input", () => {
+    const numChildren = parseInt(childrenEl.value) || 0;
+    if(numChildren > 0) {
+      childrenAgesContainer.style.display = "block";
+    } else {
+      childrenAgesContainer.style.display = "none";
+      childrenAgesEl.value = ""; 
+    }
+  });
 
   function getTurnstileToken(){
     try {
@@ -728,7 +845,7 @@
       if(res.ok){
         ctaEl.textContent = "Erfolgreich gesendet ✓";
         setCtaStatus("Vielen Dank! Ihre Anfrage wurde versendet.");
-        nameEl.value = ""; emailEl.value = ""; phoneEl.value = ""; addressEl.value = ""; cityEl.value = ""; messageEl.value = "";
+        nameEl.value = ""; emailEl.value = ""; phoneEl.value = ""; messageEl.value = "";
         privacyEl.checked = false; copyCustomerEl.checked = false;
 
         resetTurnstile();
