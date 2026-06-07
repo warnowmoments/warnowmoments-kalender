@@ -48,13 +48,26 @@ export async function onRequestPost({ request }) {
         value: `
 NEUE RESERVIERUNG Warnow Moments!
 
-Datum: ${data.datum}
-Paket: ${data.paket} (${data.startzeit})
-Name: ${data.name}
-Email: ${data.email}
-Tel: ${data.telefon}
-Nachricht: ${data.nachricht || '-'}
+Datum: ${data.SQF_date || data.datum}
+Paket: ${data.SQF_paket || data.paket} (${data.SQF_start || data.startzeit})
 
+--- KUNDENDATEN ---
+Name: ${data.SQF_name || data.name}
+Email: ${data.SQF_email || data.email}
+Tel: ${data.SQF_phone || data.telefon}
+
+--- BUCHUNGSDETAILS ---
+Personen gesamt: ${data.SQF_persons || 'Nicht angegeben'}
+Davon Kinder: ${data.SQF_children || '0'}
+Alter der Kinder: ${data.SQF_children_ages || '-'}
+
+Zusatzoptionen:
+${data.SQF_options || 'Keine Zusatzoptionen gewählt'}
+
+Nachricht: 
+${data.SQF_message || data.nachricht || '-'}
+
+Kopie an Kunde erwünscht: ${data.SQF_copyToCustomer || 'Nein'}
 Supabase-ID: ${Date.now()}
         `
       }]
