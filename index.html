@@ -17,7 +17,7 @@
       --fs-h1: 34px;
       --lh-h1: 1.12;
 
-      --fs-label: 15px;
+      --fs-label: 15px;x
       --fs-ui: 16px;
       --fs-muted: 14px;
 
@@ -409,7 +409,7 @@
     </div>
 
     <p class="muted" style="margin-top:20px; text-align: center; font-size: 13px;">
-      Hinweis: Bitte ca. 15 Minuten vor Start für Einweisung vor Ort sein. Rückgabe/Anlegen erfolgt nach der Fahrt (ca. 15 Min. eingeplant).
+      Hinweis: Bitte ca. 30 Minuten vor Start für Einweisung vor Ort sein. Rückgabe/Anlegen erfolgt nach der Fahrt (ca. 30 Min. eingeplant).
     </p>
   </div>
 </div>
@@ -642,28 +642,34 @@
   }
 
     function filterByBookings(dateISO, durationHours, hours){
-    const ok = [];
-    const bufferMs = RETURN_BUFFER_MIN * 60 * 1000; // 30 Min Puffer in Millisekunden
-    for(const h of hours){
-      const start = new Date(dateISO + "T00:00:00");
-      start.setHours(h,0,0,0);
-      const startMs = start.getTime();
-      const endMs = startMs + durationHours*60*60*1000;
-      
-      let hasOverlap = false;
-      for(const e of publicEvents){
-        // Puffer zu den bestehenden Buchungen addieren/subtrahieren
-        const blockedStart = e.startMs - bufferMs;
-        const blockedEnd = e.endMs + bufferMs;
-        if(rangesOverlap(startMs, endMs, blockedStart, blockedEnd)){
-          hasOverlap = true;
-          break;
-        }
+  const ok = [];
+  const bufferMs = RETURN_BUFFER_MIN * 60 * 1000;
+
+  for (const h of hours) {
+    const start = new Date(dateISO + "T00:00:00");
+    start.setHours(h, 0, 0, 0);
+
+    const startMs = start.getTime();
+    const endMs = startMs + durationHours * 60 * 60 * 1000;
+
+    let hasConflict = false;
+
+    for (const e of publicEvents) {
+      const overlapsDirectly = startMs < e.endMs && e.startMs < endMs;
+      const tooCloseBefore = endMs <= e.startMs && (e.startMs - endMs) < bufferMs;
+      const tooCloseAfter = startMs >= e.endMs && (startMs - e.endMs) < bufferMs;
+
+      if (overlapsDirectly || tooCloseBefore || tooCloseAfter) {
+        hasConflict = true;
+        break;
       }
-      if(!hasOverlap) ok.push(h);
     }
-    return ok;
+
+    if (!hasConflict) ok.push(h);
   }
+
+  return ok;
+}
 
   function updateSlotButtonVisuals() {
     const current = startEl.value;
