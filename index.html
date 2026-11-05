@@ -336,10 +336,6 @@
       <label style="margin-bottom: 8px; display: block;">Zusatzoptionen (optional)</label>
       <div class="options-pill-wrap">
         <label class="option-pill">
-          <input type="checkbox" id="opt-dog" value="Hund">
-          <span>+ Hund</span>
-        </label>
-        <label class="option-pill">
           <input type="checkbox" id="opt-dishes" value="Geschirrpaket">
           <span>+ Geschirrpaket</span>
         </label>
@@ -350,6 +346,10 @@
         <label class="option-pill">
           <input type="checkbox" id="opt-bbq" value="Pistol Prime BBQ - Grillpaket">
           <span>+ Grillpaket</span>
+        </label>
+	<label class="option-pill">
+          <input type="checkbox" id="opt-bbq" value="Powerstation">
+          <span>+ Powerstation</span>
         </label>
         <label class="option-pill">
           <input type="checkbox" id="opt-snacks" value="Matrosenbox - Snacks">
@@ -367,6 +367,10 @@
           <input type="checkbox" id="opt-cool" value="Kühlbox">
           <span>+ Kühlbox</span>
         </label>
+	<label class="option-pill">
+          <input type="checkbox" id="opt-dog" value="Hund">
+          <span>+ Hund</span>
+        </label>
       </div>
     </div>
     <div style="margin-top:16px">
@@ -381,8 +385,8 @@
     <div class="checkbox-row">
       <input type="checkbox" id="privacy" required />
       <label for="privacy">
-        Ich stimme zu, dass meine Angaben erhoben und verarbeitet werden.
-        Details siehe <a href="https://warnowmoments.de/datenschutzerklaerung" target="_blank" rel="noopener">Datenschutzerklärung</a>.
+        Informationen zur Verarbeitung Ihrer personenbezogenen Daten finden Sie in unserer Datenschutzerklärung. Wir verwenden Ihre Angaben zur Bearbeitung Ihrer Anfrage und zur Kommunikation über den gewünschten Miettermin.
+        <a href="https://warnowmoments.de/datenschutzerklaerung" target="_blank" rel="noopener">Datenschutzerklärung</a>.
       </label>
     </div>
 
@@ -400,7 +404,7 @@
     </div>
 
     <div class="grid grid-2col" style="margin-top: 28px; gap: 12px;">
-      <div><button class="btn btn-full" id="cta" type="button">Anfragen</button></div>
+      <div><button class="btn btn-full" id="cta" type="button">Unverbindlich anfragen</button></div>
       <div><a class="btn2 btn-full" id="cta2" href="https://warnowmoments.de/contact" target="_blank" rel="noopener">Kontakt aufnehmen</a></div>
     </div>
 
@@ -409,7 +413,7 @@
     </div>
 
     <p class="muted" style="margin-top:20px; text-align: center; font-size: 13px;">
-      Hinweis: Bitte ca. 15 Minuten vor Start für Einweisung vor Ort sein. Rückgabe/Anlegen erfolgt nach der Fahrt (ca. 15 Min. eingeplant).
+      Bitte erscheinen Sie 15 Minuten vor dem vereinbarten Mietbeginn zur Einweisung. Das Floß muss spätestens zum vereinbarten Ende der Mietzeit am Rückgabeort zurückgegeben sein. Eine verspätete Ankunft verlängert die Mietzeit nicht automatisch.
     </p>
   </div>
 </div>
@@ -850,7 +854,7 @@
 
       if(res.ok){
         ctaEl.textContent = "Erfolgreich gesendet ✓";
-        setCtaStatus("Vielen Dank! Ihre Anfrage wurde versendet.");
+        setCtaStatus("Vielen Dank! Ihre unverbindliche Anfrage wurde übermittelt. Wir prüfen Ihren Wunschtermin und melden uns bei Ihnen. Diese Nachricht ist noch keine Buchungsbestätigung.");
         nameEl.value = ""; emailEl.value = ""; phoneEl.value = ""; messageEl.value = "";
         privacyEl.checked = false; copyCustomerEl.checked = false;
 
